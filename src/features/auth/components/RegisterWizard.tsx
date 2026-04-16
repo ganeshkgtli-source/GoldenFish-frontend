@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type AnyActionArg } from "react";
 import {
   TrendingUp,
   Mail,
@@ -9,23 +9,28 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
+import api from "@/lib/api";
 
 interface Props {
   onSubmit: (data: any) => Promise<void>;
   onVerifyOtp?: (otp: string) => Promise<void>;
   loading: boolean;
+  initialEmail?: string;
 }
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 export default function RegisterWizard({
   onSubmit,
   onVerifyOtp,
   loading,
+  initialEmail = "",
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
 
   const [form, setForm] = useState({
     username: "",
-    email: "",
+    email: initialEmail,
     phone: "",
     password: "",
     confirmPassword: "",
@@ -64,7 +69,17 @@ export default function RegisterWizard({
         setError("Please fill in all personal information");
         return false;
       }
+      if (!form.phone.startsWith("+91")) {
+        setError("Only Indian mobile numbers are accepted");
+        return false;
+      }
 
+      const indianPhone = form.phone.replace("+91", "");
+
+      if (!/^[6-9]\d{9}$/.test(indianPhone)) {
+        setError("Only valid Indian mobile numbers are accepted");
+        return false;
+      }
       if (!/\S+@\S+\.\S+/.test(form.email)) {
         setError("Please enter a valid email address");
         return false;
@@ -122,9 +137,33 @@ export default function RegisterWizard({
 
     return true;
   };
+  const checkUserExists = async (email: string, phone: string) => {
+    const res = await api.post("/check-user-exists/", {
+      email,
+      // phone: phone.replace(/^\+91/, ""),
+      phone
+    });
 
-  const handleNext = () => {
-    if (validateStep() && currentStep < 3) {
+    return res.data;
+  };
+  const handleNext = async () => {
+    if (!validateStep()) return;
+
+    if (currentStep === 1) {
+      try {
+        const res = await checkUserExists(form.email, form.phone);
+
+        if (res.exists) {
+          setError(res.message);
+          return;
+        }
+      } catch {
+        setError("Failed to validate user details");
+        return;
+      }
+    }
+
+    if (currentStep < 3) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -143,19 +182,14 @@ export default function RegisterWizard({
       setError("");
       setSuccess("");
 
-      const {
-  confirmPassword,
-  ...payload
-} = form;
+      const { confirmPassword, ...payload } = form;
 
       await onSubmit(payload);
 
       setShowOtp(true);
       setSuccess("OTP sent to your email 📩");
     } catch (err: any) {
-      setError(
-        err?.response?.data?.detail || "Registration failed"
-      );
+      setError(err?.response?.data?.detail || "Registration failed");
     }
   };
 
@@ -175,10 +209,7 @@ export default function RegisterWizard({
 
       setSuccess("Email verified successfully ✅");
     } catch (err: any) {
-      setError(
-        err?.response?.data?.detail ||
-          "OTP verification failed"
-      );
+      setError(err?.response?.data?.detail || "OTP verification failed");
     }
   };
 
@@ -230,8 +261,8 @@ export default function RegisterWizard({
                             isCompleted
                               ? "bg-red-600 text-white shadow-lg shadow-red-500/50"
                               : isCurrent
-                              ? "bg-red-600 text-white shadow-lg shadow-red-500/50 scale-110"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                                ? "bg-red-600 text-white shadow-lg shadow-red-500/50 scale-110"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-500"
                           }`}
                         >
                           {isCompleted ? (
@@ -259,13 +290,17 @@ export default function RegisterWizard({
               <div className="px-6 sm:px-10 py-8">
                 {error && (
                   <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
                   </div>
                 )}
 
                 {success && (
                   <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      {success}
+                    </p>
                   </div>
                 )}
 
@@ -280,10 +315,41 @@ export default function RegisterWizard({
                         Let's start with your basic details
                       </p>
                     </div>
+                    <Field
+                      label="Username"
+                      name="username"
+                      placeholder="Choose a unique username"
+                      value={form.username}
+                      onChange={handleChange}
+                    />
+                    <Field
+                      label="Email Address"
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={form.email}
+                      onChange={handleChange}
+                    />
+                    {/* <Field label="Phone Number" name="phone" type="tel" placeholder="+1 (555) 000-0000" value={form.phone} onChange={handleChange} /> */}
+                    <PhoneInput
+                      international
+                      defaultCountry="IN"
+                      value={form.phone}
+                      onChange={(value) => {
+                        const phone = value || "";
 
-                    <Field label="Username" name="username" placeholder="Choose a unique username" value={form.username} onChange={handleChange} />
-                    <Field label="Email Address" name="email" type="email" placeholder="you@example.com" value={form.email} onChange={handleChange} />
-                    <Field label="Phone Number" name="phone" type="tel" placeholder="+1 (555) 000-0000" value={form.phone} onChange={handleChange} />
+                        setForm((prev) => ({
+                          ...prev,
+                          phone,
+                        }));
+
+                        if (phone && !phone.startsWith("+91")) {
+                          setError("Only Indian mobile numbers are accepted");
+                        } else {
+                          setError("");
+                        }
+                      }}
+                    />{" "}
                   </div>
                 )}
 
@@ -320,7 +386,6 @@ export default function RegisterWizard({
                     {form.password && (
                       <div className="space-y-2">
                         <div className="flex gap-1">
-                          {/* Password Strength */}
                           <div
                             className={`h-1 flex-1 rounded ${
                               form.password.length >= 8 &&
@@ -333,7 +398,6 @@ export default function RegisterWizard({
                             }`}
                           />
 
-                          {/* Password Match Progress */}
                           <div className="h-1 flex-1 rounded bg-gray-300 overflow-hidden">
                             <div
                               className="h-full bg-green-500 transition-all duration-300"
@@ -392,9 +456,28 @@ export default function RegisterWizard({
                       </p>
                     </div>
 
-                    <Field label="Client ID" name="client_id" placeholder="Enter your Dhan Client ID" value={form.client_id} onChange={handleChange} />
-                    <Field label="API Key" name="api_key" placeholder="Enter your API Key" value={form.api_key} onChange={handleChange} />
-                    <Field label="API Secret" name="api_secret" type="password" placeholder="Enter your API Secret" value={form.api_secret} onChange={handleChange} />
+                    <Field
+                      label="Client ID"
+                      name="client_id"
+                      placeholder="Enter your Dhan Client ID"
+                      value={form.client_id}
+                      onChange={handleChange}
+                    />
+                    <Field
+                      label="API Key"
+                      name="api_key"
+                      placeholder="Enter your API Key"
+                      value={form.api_key}
+                      onChange={handleChange}
+                    />
+                    <Field
+                      label="API Secret"
+                      name="api_secret"
+                      type="password"
+                      placeholder="Enter your API Secret"
+                      value={form.api_secret}
+                      onChange={handleChange}
+                    />
 
                     <label className="flex items-start gap-3">
                       <input
@@ -499,10 +582,7 @@ export default function RegisterWizard({
   );
 }
 
-function Field({
-  label,
-  ...props
-}: any) {
+function Field({ label, ...props }: any) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

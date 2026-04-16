@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import RegisterWizard from "../components/RegisterWizard";
-import OtpVerification from "../components/OtpVerification";
 import ThemeToggle from "../components/ThemeToggle";
 
 import {
@@ -13,22 +11,21 @@ import {
 export default function RegisterPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [showOtp, setShowOtp] = useState(false);
-
   const registerMutation = useRegister();
   const verifyMutation = useVerifyOtp();
 
+  let registeredEmail = "";
+
   const handleRegister = async (data: any) => {
+    console.log("📤 REGISTER PAYLOAD:", data);
     await registerMutation.mutateAsync(data);
 
-    setEmail(data.email);
-    setShowOtp(true);
+    registeredEmail = data.email;
   };
 
   const handleVerifyOtp = async (otp: string) => {
     const res = await verifyMutation.mutateAsync({
-      email,
+      email: registeredEmail,
       otp,
     });
 
@@ -49,18 +46,14 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F] flex items-center justify-center px-4">
       <ThemeToggle />
 
-      {!showOtp ? (
-        <RegisterWizard
-          onSubmit={handleRegister}
-          loading={registerMutation.isPending}
-        />
-      ) : (
-        <OtpVerification
-          email={email}
-          onVerify={handleVerifyOtp}
-          loading={verifyMutation.isPending}
-        />
-      )}
+      <RegisterWizard
+        onSubmit={handleRegister}
+        onVerifyOtp={handleVerifyOtp}
+        loading={
+          registerMutation.isPending ||
+          verifyMutation.isPending
+        }
+      />
     </div>
   );
 }
