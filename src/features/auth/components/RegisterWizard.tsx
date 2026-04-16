@@ -1,4 +1,4 @@
-import { useState, } from "react";
+import { useState } from "react";
 import {
   TrendingUp,
   Mail,
@@ -70,16 +70,16 @@ export default function RegisterWizard({
         return false;
       }
       if (!form.phone.startsWith("+91")) {
-        setError("Only Indian mobile numbers are accepted");
-        return false;
-      }
+  setError("Only Indian mobile numbers are accepted");
+  return false;
+}
 
-      const indianPhone = form.phone.replace("+91", "");
+const indianPhone = form.phone.replace("+91", "");
 
-      if (!/^[6-9]\d{9}$/.test(indianPhone)) {
-        setError("Only valid Indian mobile numbers are accepted");
-        return false;
-      }
+if (!/^[6-9]\d{9}$/.test(indianPhone)) {
+  setError("Only valid Indian mobile numbers are accepted");
+  return false;
+}
       if (!/\S+@\S+\.\S+/.test(form.email)) {
         setError("Please enter a valid email address");
         return false;
@@ -140,8 +140,8 @@ export default function RegisterWizard({
   const checkUserExists = async (email: string, phone: string) => {
     const res = await api.post("/check-user-exists/", {
       email,
-      // phone: phone.replace(/^\+91/, ""),
-      phone
+      phone: phone.replace(/^\+91/, ""),
+      // phone,
     });
 
     return res.data;
@@ -184,7 +184,10 @@ export default function RegisterWizard({
 
       const { confirmPassword, ...payload } = form;
 
-      await onSubmit(payload);
+      await onSubmit({
+  ...payload,
+  phone: payload.phone.replace(/^\+91/, ""),
+});
 
       setShowOtp(true);
       setSuccess("OTP sent to your email 📩");
@@ -331,25 +334,36 @@ export default function RegisterWizard({
                       onChange={handleChange}
                     />
                     {/* <Field label="Phone Number" name="phone" type="tel" placeholder="+1 (555) 000-0000" value={form.phone} onChange={handleChange} /> */}
-                    <PhoneInput
-                      international
-                      defaultCountry="IN"
-                      value={form.phone}
-                      onChange={(value) => {
-                        const phone = value || "";
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Phone Number
+                      </label>
 
-                        setForm((prev) => ({
-                          ...prev,
-                          phone,
-                        }));
+                      <PhoneInput
+                        international
+                        defaultCountry="IN"
+                        placeholder="Enter your phone number"
+                        value={form.phone}
+                        onChange={(value) => {
+                          const phone = value || "";
 
-                        if (phone && !phone.startsWith("+91")) {
-                          setError("Only Indian mobile numbers are accepted");
-                        } else {
-                          setError("");
-                        }
-                      }}
-                    />{" "}
+                          setForm((prev) => ({
+                            ...prev,
+                            phone,
+                          }));
+
+                          if (phone && !phone.startsWith("+91")) {
+                            setError("Only Indian mobile numbers are accepted");
+                          } else {
+                            setError("");
+                          }
+                        }}
+                      />
+
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Only Indian mobile numbers are accepted
+                      </p>
+                    </div>
                   </div>
                 )}
 
