@@ -10,7 +10,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import api from "@/lib/api";
-
+import OtpVerification from "./OtpVerification";
 interface Props {
   onSubmit: (data: any) => Promise<void>;
   onVerifyOtp?: (otp: string) => Promise<void>;
@@ -33,19 +33,21 @@ export default function RegisterWizard({
     email: initialEmail,
     phone: "",
     password: "",
-    confirmPassword: "",
+    confirm_password: "",
     client_id: "",
     api_key: "",
     api_secret: "",
-    terms: false,
+    terms_accepted: false,
+    account_type: null,
   });
 
-  const [otp, setOtp] = useState("");
   const [showOtp, setShowOtp] = useState(false);
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
+  const [hasDhanAccount, setHasDhanAccount] = useState<boolean | null>(null);
+  const [accountType, setAccountType] = useState<"AP" | "INDIVIDUAL" | null>(
+    null,
+  );
   const steps = [
     { number: 1, title: "Personal Info", icon: User },
     { number: 2, title: "Security", icon: Lock },
@@ -54,7 +56,10 @@ export default function RegisterWizard({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-
+//     console.log(name, value, type, checked);
+//     console.log(form ,"data"
+// ,      typeof(checked)
+//     );
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -70,16 +75,16 @@ export default function RegisterWizard({
         return false;
       }
       if (!form.phone.startsWith("+91")) {
-  setError("Only Indian mobile numbers are accepted");
-  return false;
-}
+        setError("Only Indian mobile numbers are accepted");
+        return false;
+      }
 
-const indianPhone = form.phone.replace("+91", "");
+      const indianPhone = form.phone.replace("+91", "");
 
-if (!/^[6-9]\d{9}$/.test(indianPhone)) {
-  setError("Only valid Indian mobile numbers are accepted");
-  return false;
-}
+      if (!/^[6-9]\d{9}$/.test(indianPhone)) {
+        setError("Only valid Indian mobile numbers are accepted");
+        return false;
+      }
       if (!/\S+@\S+\.\S+/.test(form.email)) {
         setError("Please enter a valid email address");
         return false;
@@ -87,12 +92,12 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
     }
 
     if (currentStep === 2) {
-      if (!form.password || !form.confirmPassword) {
+      if (!form.password || !form.confirm_password) {
         setError("Please fill in all security fields");
         return false;
       }
 
-      if (form.password !== form.confirmPassword) {
+      if (form.password !== form.confirm_password) {
         setError("Passwords do not match");
         return false;
       }
@@ -124,12 +129,20 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
     }
 
     if (currentStep === 3) {
-      if (!form.client_id || !form.api_key || !form.api_secret) {
-        setError("Please fill in all API credentials");
+      if (!form.client_id) {
+        setError("Client ID is required");
         return false;
       }
 
-      if (!form.terms) {
+      // ✅ ONLY for INDIVIDUAL
+      if (accountType === "INDIVIDUAL") {
+        if (!form.api_key || !form.api_secret) {
+          setError("Please fill in all API credentials");
+          return false;
+        }
+      }
+
+      if (!form.terms_accepted) {
         setError("Please accept Terms & Conditions");
         return false;
       }
@@ -137,37 +150,72 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
 
     return true;
   };
-  const checkUserExists = async (email: string, phone: string) => {
+
+  const checkUserExists = async (
+    username: string,
+    email: string,
+    phone: string,
+  ) => {
     const res = await api.post("/check-user-exists/", {
+      username,
       email,
       phone: phone.replace(/^\+91/, ""),
-      // phone,
     });
 
     return res.data;
   };
+
   const handleNext = async () => {
+      if (loading) return; 
     if (!validateStep()) return;
 
+    // 🔹 STEP 1 → check user exists
     if (currentStep === 1) {
       try {
-        const res = await checkUserExists(form.email, form.phone);
+        const res = await checkUserExists(
+          form.username,
+          form.email,
+          form.phone,
+        );
 
         if (res.exists) {
           setError(res.message);
           return;
         }
-      } catch {
-        setError("Failed to validate user details");
+      } catch(error) {
+        console.log(error)
+        setError("Failed    to validate user details",  );
         return;
       }
     }
 
+    // 🔹 STEP 2 → dhan + account type logic
+    if (currentStep === 2) {
+      if (hasDhanAccount === null) {
+        setError("Please select an option to continue");
+        return;
+      }
+
+      if (hasDhanAccount === true) {
+        // ✅ NEW: account type validation
+        if (!accountType) {
+          setError("Please select account type");
+          return;
+        }
+
+        setCurrentStep(3);
+      } else {
+        window.open("https://dhan.co/", "_blank");
+      }
+
+      return;
+    }
+
+    // 🔹 DEFAULT FLOW
     if (currentStep < 3) {
       setCurrentStep((prev) => prev + 1);
     }
   };
-
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
@@ -175,47 +223,54 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep()) return;
+ const handleSubmit = async () => {
+  if (loading) return;
+  if (!validateStep()) return;
 
-    try {
-      setError("");
-      setSuccess("");
+  if (!accountType) {
+    setError("Please select account type");
+    return;
+  }
 
-      const { confirmPassword, ...payload } = form;
+  try {
+    setError("");
+    setSuccess("");
 
-      await onSubmit({
-  ...payload,
-  phone: payload.phone.replace(/^\+91/, ""),
-});
+    const { confirm_password, ...payload } = {
+      ...form,
+      username: form.username.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+    };
 
-      setShowOtp(true);
-      setSuccess("OTP sent to your email 📩");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Registration failed");
-    }
-  };
+    const cleanedPayload =
+      accountType === "AP"
+        ? {
+            ...payload, 
+            api_key: "",
+            api_secret: "",
+          }
+        : payload;
+// console.log("Submitting registration with payload:", cleanedPayload);
+    await onSubmit({
+      ...cleanedPayload,
+      phone: payload.phone.replace(/^\+91/, ""),
+      account_type: accountType,
+    });
+ 
+    setShowOtp(true);
+    setSuccess("OTP sent to your email 📩");
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      setError("Please enter a valid 6-digit OTP");
-      return;
-    }
+  } catch (err: any) {
+    console.log("❌ REGISTER ERROR:", err?.response?.data);
 
-    try {
-      setError("");
-      setSuccess("");
-
-      if (onVerifyOtp) {
-        await onVerifyOtp(otp);
-      }
-
-      setSuccess("Email verified successfully ✅");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "OTP verification failed");
-    }
-  };
-
+    setError(
+      err?.response?.data?.message ||
+      err?.response?.data?.detail ||
+      "Registration failed"
+    );
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
       <div className="w-full max-w-3xl">
@@ -226,7 +281,7 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              TimeLine
+              Time Line
             </h1>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -353,8 +408,9 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
                           }));
 
                           if (phone && !phone.startsWith("+91")) {
-                            setError("Only Indian mobile numbers are accepted");
-                          } else {
+  setError("Only Indian mobile numbers are accepted");
+  return; // ✅ IMPORTANT
+} else {
                             setError("");
                           }
                         }}
@@ -390,10 +446,10 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
 
                     <Field
                       label="Confirm Password"
-                      name="confirmPassword"
+                      name="confirm_password"
                       type="password"
                       placeholder="Re-enter your password"
-                      value={form.confirmPassword}
+                      value={form.confirm_password}
                       onChange={handleChange}
                     />
 
@@ -423,11 +479,11 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
 
                                         for (
                                           let i = 0;
-                                          i < form.confirmPassword.length;
+                                          i < form.confirm_password.length;
                                           i++
                                         ) {
                                           if (
-                                            form.confirmPassword[i] ===
+                                            form.confirm_password[i] ===
                                             form.password[i]
                                           ) {
                                             matchedChars++;
@@ -455,6 +511,120 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
                         </div>
                       </div>
                     )}
+
+                    {/* Dhan Account Selection (Clean Card UI - No Checkbox) */}
+                    <div className="mt-6">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Do you have a Dhan trading account?
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* YES CARD */}
+                        <div
+                          onClick={() => {
+                            setHasDhanAccount(true);
+                            setAccountType(null); // reset
+                          }}
+                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+      ${
+        hasDhanAccount === true
+          ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
+          : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
+      }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-green-400">
+                                Yes, I have one
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Continue with API setup
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* NO CARD */}
+                        <div
+                          onClick={() => {
+                            setHasDhanAccount(false);
+                            setAccountType(null);
+                          }}
+                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+      ${
+        hasDhanAccount === false
+          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
+          : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
+      }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-blue-400">
+                                No, create account
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Redirect to Dhan signup
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🔥 ADD THIS BLOCK BELOW */}
+                    {hasDhanAccount === true && (
+                      <div className="mt-6">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          Select Account Type
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* INDIVIDUAL */}
+                          <div
+                            onClick={() => setAccountType("INDIVIDUAL")}
+                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+        ${
+          accountType === "INDIVIDUAL"
+            ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
+            : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
+        }`}
+                          >
+                            <div className="text-sm font-semibold text-green-400">
+                              INDIVIDUAL Account
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Full API setup required
+                            </p>
+                          </div>
+
+                          {/* API */}
+                          <div
+                            onClick={() => {
+                              setAccountType("AP");
+
+                              setForm((prev) => ({
+                                ...prev,
+                                api_key: "",
+                                api_secret: "",
+                              }));
+                            }}
+                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+        ${
+          accountType === "AP"
+            ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
+            : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
+        }`}
+                          >
+                            <div className="text-sm font-semibold text-blue-400">
+                              API Account
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Only Client ID required
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -463,13 +633,16 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
                   <div className="space-y-5">
                     <div className="mb-6">
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        API Configuration
+{accountType === "AP"
+    ? "Client ID Setup"
+    : "API Configuration"}
                       </h2>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Connect your Dhan trading account
                       </p>
                     </div>
 
+                    {/* ALWAYS SHOW */}
                     <Field
                       label="Client ID"
                       name="client_id"
@@ -477,27 +650,34 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
                       value={form.client_id}
                       onChange={handleChange}
                     />
-                    <Field
-                      label="API Key"
-                      name="api_key"
-                      placeholder="Enter your API Key"
-                      value={form.api_key}
-                      onChange={handleChange}
-                    />
-                    <Field
-                      label="API Secret"
-                      name="api_secret"
-                      type="password"
-                      placeholder="Enter your API Secret"
-                      value={form.api_secret}
-                      onChange={handleChange}
-                    />
+
+                    {/* ONLY FOR INDIVIDUAL ACCOUNT */}
+                    {accountType === "INDIVIDUAL" && (
+                      <>
+                        <Field
+                          label="API Key"
+                          name="api_key"
+                          placeholder="Enter your API Key"
+                          value={form.api_key}
+                          onChange={handleChange}
+                        />
+
+                        <Field
+                          label="API Secret"
+                          name="api_secret"
+                          type="password"
+                          placeholder="Enter your API Secret"
+                          value={form.api_secret}
+                          onChange={handleChange}
+                        />
+                      </>
+                    )}
 
                     <label className="flex items-start gap-3">
                       <input
                         type="checkbox"
-                        name="terms"
-                        checked={form.terms}
+                        name="terms_accepted"
+                        checked={form.terms_accepted}
                         onChange={handleChange}
                         className="mt-1"
                       />
@@ -554,30 +734,26 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
               </div>
             </>
           ) : (
-            <div className="px-6 sm:px-10 py-12">
-              <div className="text-center mb-8">
-                <Mail className="w-10 h-10 text-red-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold">Verify Your Email</h3>
-                <p className="text-sm text-gray-500">{form.email}</p>
-              </div>
+            <OtpVerification
+              email={form.email}
+              loading={loading}
+              onVerify={async (otp: string) => {
+                try {
+                  setError("");
+                  setSuccess("");
 
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) =>
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  if (onVerifyOtp) {
+                    await onVerifyOtp(otp); // ✅ parent will redirect
+                  }
+                } catch (err: any) {
+                  setError(
+                    err?.response?.data?.message ||
+                      err?.response?.data?.detail ||
+                      "OTP verification failed",
+                  );
                 }
-                className="w-full border rounded-lg p-4 text-center text-2xl"
-              />
-
-              <button
-                onClick={handleVerifyOtp}
-                disabled={loading || otp.length < 6}
-                className="w-full mt-4"
-              >
-                {loading ? "Verifying..." : "Verify Email"}
-              </button>
-            </div>
+              }}
+            />
           )}
         </div>
 
@@ -585,7 +761,7 @@ if (!/^[6-9]\d{9}$/.test(indianPhone)) {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
-              <a href="#" className="text-red-600 font-medium">
+              <a href="/login" className="text-red-600 font-medium">
                 Sign in
               </a>
             </p>

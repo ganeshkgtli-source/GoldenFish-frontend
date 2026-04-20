@@ -24,7 +24,7 @@ export const registerSchema = z.object({
 
   api_secret: z.string().min(1),
 
-  terms: z.boolean().refine((val) => val === true, {
+  terms_accepted: z.boolean().refine((val) => val === true, {
     message: "Accept Terms & Conditions",
   }),
 });

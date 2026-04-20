@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import RegisterWizard from "../components/RegisterWizard";
@@ -14,37 +15,33 @@ export default function RegisterPage() {
   const registerMutation = useRegister();
   const verifyMutation = useVerifyOtp();
 
-  let registeredEmail = "";
+  // ✅ FIX: useState instead of let
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleRegister = async (data: any) => {
     console.log("📤 REGISTER PAYLOAD:", data);
+
     await registerMutation.mutateAsync(data);
 
-    registeredEmail = data.email;
+    // ✅ store email properly
+    setRegisteredEmail(data.email);
   };
 
   const handleVerifyOtp = async (otp: string) => {
     const res = await verifyMutation.mutateAsync({
-      email: registeredEmail,
+      email: registeredEmail, // ✅ now correct
       otp,
     });
 
-    localStorage.setItem(
-      "access",
-      res.tokens.access
-    );
+    localStorage.setItem("access", res.tokens.access);
+    localStorage.setItem("refresh", res.tokens.refresh);
 
-    localStorage.setItem(
-      "refresh",
-      res.tokens.refresh
-    );
-
-    navigate({ to: "/home" });
+    navigate({ to: "/login" });
   };
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F] flex items-center justify-center px-4">
-      <ThemeToggle />
+      <ThemeToggle variant="floating" />
 
       <RegisterWizard
         onSubmit={handleRegister}
