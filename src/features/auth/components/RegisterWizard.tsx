@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   TrendingUp,
-  Mail,
   User,
   Lock,
   Key,
