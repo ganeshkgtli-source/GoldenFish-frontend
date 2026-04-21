@@ -71,7 +71,7 @@ export default function RegisterWizard({
   const isPrefixMatch =
     form.confirm_password && form.password.startsWith(form.confirm_password);
 
-  const isExactMatch = form.password === form.confirm_password;
+  // const isExactMatch = form.password === form.confirm_password;
 
   const validateStep = () => {
     setError("");

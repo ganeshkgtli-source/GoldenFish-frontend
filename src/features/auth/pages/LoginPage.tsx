@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { TrendingUp, Mail, Lock } from "lucide-react";
+import { TrendingUp,  } from "lucide-react";
 
 import { useLogin } from "../hooks/useLogin";
 import { useVerifyOtp, useResendOtp } from "../hooks/useRegister";
