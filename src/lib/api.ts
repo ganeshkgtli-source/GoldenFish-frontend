@@ -3,8 +3,9 @@ import axios from "axios";
 /* ================= API INSTANCE ================= */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-     headers: {
-    "Content-Type": "application/json",   // 🔥 ADD THIS
+  timeout: 10000, // ✅ prevents hanging requests
+  headers: {
+    "Content-Type": "application/json",
   },
 });
 
@@ -16,6 +17,7 @@ api.interceptors.request.use((config) => {
     "/register/",
     "/login/",
     "/verify-email/",
+    "/resend-email-otp/", // ✅ added
     "/token/refresh/",
   ];
 
@@ -32,7 +34,7 @@ api.interceptors.request.use((config) => {
 
 /* ================= REFRESH CONTROL ================= */
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
-let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
 
 /* ================= LOGOUT ================= */
 export const logout = () => {
@@ -45,48 +47,59 @@ export const logout = () => {
 };
 
 /* ================= REFRESH TOKEN ================= */
-export const refreshAccessToken = async () => {
-  if (isRefreshing) return true;
+export const refreshAccessToken = async (): Promise<boolean> => {
+  if (refreshPromise) return refreshPromise;
 
-  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refresh = localStorage.getItem("refresh");
 
-  try {
-    const refresh = localStorage.getItem("refresh");
+      if (!refresh) throw new Error("No refresh token");
 
-    if (!refresh) throw new Error("No refresh token");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/token/refresh/`,
+        { refresh }
+      );
 
-    const res = await axios.post(
-      `${import.meta.env.VITE_API_URL}token/refresh/`,
-      { refresh }
-    );
+      localStorage.setItem("access", res.data.access);
 
-    localStorage.setItem("access", res.data.access);
+      if (res.data.refresh) {
+        localStorage.setItem("refresh", res.data.refresh);
+      }
 
-    if (res.data.refresh) {
-      localStorage.setItem("refresh", res.data.refresh);
+      if (import.meta.env.DEV) {
+        console.log("✅ Access token refreshed");
+      }
+
+      return true;
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.log("❌ Refresh failed");
+      }
+
+      logout();
+      return false;
+    } finally {
+      refreshPromise = null;
     }
+  })();
 
-    console.log("✅ Access token refreshed");
-
-    return true;
-  } catch (err) {
-    console.log("❌ Refresh failed");
-    logout();
-    return false;
-  } finally {
-    isRefreshing = false;
-  }
+  return refreshPromise;
 };
 
 /* ================= AUTO REFRESH TIMER ================= */
 export const startRefreshTimer = () => {
   stopRefreshTimer();
 
+  if (!localStorage.getItem("access")) return; // ✅ safety
+
   refreshTimer = setInterval(async () => {
     await refreshAccessToken();
   }, 50 * 1000);
 
-  console.log("⏱️ Auto refresh started");
+  if (import.meta.env.DEV) {
+    console.log("⏱️ Auto refresh started");
+  }
 };
 
 /* ================= STOP TIMER ================= */
@@ -107,7 +120,6 @@ export const validateSession = async () => {
   }
 
   startRefreshTimer();
-
   return true;
 };
 
@@ -118,10 +130,13 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (!originalRequest) return Promise.reject(error); // ✅ safety
+
     const authExcludedRoutes = [
       "/register/",
       "/login/",
       "/verify-email/",
+      "/resend-email-otp/", // ✅ added
       "/token/refresh/",
     ];
 

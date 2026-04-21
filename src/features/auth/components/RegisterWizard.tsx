@@ -13,8 +13,10 @@ import OtpVerification from "./OtpVerification";
 interface Props {
   onSubmit: (data: any) => Promise<void>;
   onVerifyOtp?: (otp: string) => Promise<void>;
+  onResend?: () => Promise<void>;
   loading: boolean;
   initialEmail?: string;
+  externalError?: string;
 }
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -24,6 +26,7 @@ export default function RegisterWizard({
   onVerifyOtp,
   loading,
   initialEmail = "",
+  onResend,
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -47,6 +50,7 @@ export default function RegisterWizard({
   const [accountType, setAccountType] = useState<"AP" | "INDIVIDUAL" | null>(
     null,
   );
+  const [submitting, setSubmitting] = useState(false);
   const steps = [
     { number: 1, title: "Personal Info", icon: User },
     { number: 2, title: "Security", icon: Lock },
@@ -55,15 +59,19 @@ export default function RegisterWizard({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-//     console.log(name, value, type, checked);
-//     console.log(form ,"data"
-// ,      typeof(checked)
-//     );
+    //     console.log(name, value, type, checked);
+    //     console.log(form ,"data"
+    // ,      typeof(checked)
+    //     );
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+  const isPrefixMatch =
+    form.confirm_password && form.password.startsWith(form.confirm_password);
+
+  const isExactMatch = form.password === form.confirm_password;
 
   const validateStep = () => {
     setError("");
@@ -73,7 +81,7 @@ export default function RegisterWizard({
         setError("Please fill in all personal information");
         return false;
       }
-      if (!form.phone.startsWith("+91")) {
+      if (!form.phone || !form.phone.startsWith("+91")) {
         setError("Only Indian mobile numbers are accepted");
         return false;
       }
@@ -165,12 +173,16 @@ export default function RegisterWizard({
   };
 
   const handleNext = async () => {
-      if (loading) return; 
+    if (loading) return;
     if (!validateStep()) return;
 
     // 🔹 STEP 1 → check user exists
     if (currentStep === 1) {
       try {
+        if (!form.phone) {
+  setError("Phone number is required");
+  return;
+}
         const res = await checkUserExists(
           form.username,
           form.email,
@@ -181,9 +193,9 @@ export default function RegisterWizard({
           setError(res.message);
           return;
         }
-      } catch(error) {
-        console.log(error)
-        setError("Failed    to validate user details",  );
+      } catch (error) {
+        console.log(error);
+        setError("Failed to validate user details");
         return;
       }
     }
@@ -194,18 +206,19 @@ export default function RegisterWizard({
         setError("Please select an option to continue");
         return;
       }
+  if (hasDhanAccount === true) {
+  if (!accountType) {
+    setError("Please select account type");
+    return;
+  }
 
-      if (hasDhanAccount === true) {
-        // ✅ NEW: account type validation
-        if (!accountType) {
-          setError("Please select account type");
-          return;
-        }
+  setCurrentStep(3);
+} else {
+  window.open("https://dhan.co/", "_blank");
+  setError("Please create a Dhan account and come back to continue.");
+}
 
-        setCurrentStep(3);
-      } else {
-        window.open("https://dhan.co/", "_blank");
-      }
+return;
 
       return;
     }
@@ -222,54 +235,63 @@ export default function RegisterWizard({
     }
   };
 
- const handleSubmit = async () => {
-  if (loading) return;
-  if (!validateStep()) return;
+  const handleSubmit = async () => {
+if (loading || submitting) return;
 
-  if (!accountType) {
-    setError("Please select account type");
-    return;
+if (!validateStep()) return;
+setSubmitting(true);
+
+    if (!accountType) {
+      setError("Please select account type");
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const { confirm_password, ...payload } = {
+        ...form,
+        username: form.username.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      };
+
+      const cleanedPayload =
+        accountType === "AP"
+          ? {
+              ...payload,
+              api_key: "",
+              api_secret: "",
+            }
+          : payload;
+      // console.log("Submitting registration with payload:", cleanedPayload);
+      await onSubmit({
+        ...cleanedPayload,
+        phone: payload.phone.replace(/^\+91/, ""),
+        account_type: accountType,
+      });
+
+      setShowOtp(true);
+      // setSuccess("OTP sent to your email 📩");
+    } catch (err: any) {
+      console.log("❌ REGISTER ERROR:", err?.response?.data);
+
+      // setError(
+      //   err?.response?.data?.message ||
+      //     err?.response?.data?.detail ||
+      //     "Registration failed",
+      // );
+      setError(
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.message ||
+  "Registration failed"
+)
+    } finally {
+    setSubmitting(false); // ✅ ALWAYS reset
   }
-
-  try {
-    setError("");
-    setSuccess("");
-
-    const { confirm_password, ...payload } = {
-      ...form,
-      username: form.username.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-    };
-
-    const cleanedPayload =
-      accountType === "AP"
-        ? {
-            ...payload, 
-            api_key: "",
-            api_secret: "",
-          }
-        : payload;
-// console.log("Submitting registration with payload:", cleanedPayload);
-    await onSubmit({
-      ...cleanedPayload,
-      phone: payload.phone.replace(/^\+91/, ""),
-      account_type: accountType,
-    });
- 
-    setShowOtp(true);
-    setSuccess("OTP sent to your email 📩");
-
-  } catch (err: any) {
-    console.log("❌ REGISTER ERROR:", err?.response?.data);
-
-    setError(
-      err?.response?.data?.message ||
-      err?.response?.data?.detail ||
-      "Registration failed"
-    );
-  }
-};
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
       <div className="w-full max-w-3xl">
@@ -408,10 +430,9 @@ export default function RegisterWizard({
 
                           if (phone && !phone.startsWith("+91")) {
   setError("Only Indian mobile numbers are accepted");
-  return; // ✅ IMPORTANT
-} else {
-                            setError("");
-                          }
+} else if (error === "Only Indian mobile numbers are accepted") {
+  setError("");
+}
                         }}
                       />
 
@@ -451,10 +472,10 @@ export default function RegisterWizard({
                       value={form.confirm_password}
                       onChange={handleChange}
                     />
-
                     {form.password && (
                       <div className="space-y-2">
                         <div className="flex gap-1">
+                          {/* Password Strength */}
                           <div
                             className={`h-1 flex-1 rounded ${
                               form.password.length >= 8 &&
@@ -467,47 +488,49 @@ export default function RegisterWizard({
                             }`}
                           />
 
+                          {/* Password Match Bar */}
                           <div className="h-1 flex-1 rounded bg-gray-300 overflow-hidden">
                             <div
-                              className="h-full bg-green-500 transition-all duration-300"
+                              className={`h-full transition-all duration-300 ${
+                                !form.confirm_password
+                                  ? "bg-gray-300"
+                                  : isPrefixMatch
+                                    ? "bg-green-500"
+                                    : "bg-red-500"
+                              }`}
                               style={{
-                                width: `${
-                                  form.password.length
-                                    ? (() => {
-                                        let matchedChars = 0;
-
-                                        for (
-                                          let i = 0;
-                                          i < form.confirm_password.length;
-                                          i++
-                                        ) {
-                                          if (
-                                            form.confirm_password[i] ===
-                                            form.password[i]
-                                          ) {
-                                            matchedChars++;
-                                          } else {
-                                            break;
-                                          }
-                                        }
-
-                                        return (
-                                          (matchedChars /
-                                            form.password.length) *
-                                          100
-                                        );
-                                      })()
-                                    : 0
-                                }%`,
+                                width: form.password.length
+  ? `${(form.confirm_password.length / form.password.length) * 100}%`
+  : "0%"
                               }}
                             />
                           </div>
                         </div>
 
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>Password Strength</span>
-                          <span>Password Match</span>
+                        {/* Labels (Dynamic) */}
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">
+                            Password Strength
+                          </span>
+
+                          <span
+                            className={`${
+                              !form.confirm_password
+                                ? "text-gray-500"
+                                : isPrefixMatch
+                                  ? "text-green-500"
+                                  : "text-red-500"
+                            }`}
+                          >
+                            {!form.confirm_password
+                              ? "Password Match"
+                              : isPrefixMatch
+                                ? "Matching..."
+                                : "Not Matching"}
+                          </span>
                         </div>
+
+                         
                       </div>
                     )}
 
@@ -632,9 +655,9 @@ export default function RegisterWizard({
                   <div className="space-y-5">
                     <div className="mb-6">
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-{accountType === "AP"
-    ? "Client ID Setup"
-    : "API Configuration"}
+                        {accountType === "AP"
+                          ? "Client ID Setup"
+                          : "API Configuration"}
                       </h2>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Connect your Dhan trading account
@@ -707,9 +730,16 @@ export default function RegisterWizard({
               </div>
 
               <div className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t flex justify-between">
-                <button onClick={handleBack} disabled={currentStep === 1}>
-                  <ChevronLeft className="inline w-4 h-4" /> Back
-                </button>
+              {currentStep > 1 ? (
+  <button
+    onClick={handleBack}
+    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-red-600 transition"
+  >
+    <ChevronLeft className="inline w-4 h-4" /> Back
+  </button>
+) : (
+  <div /> // keeps layout spacing balanced
+)}
 
                 {currentStep < 3 ? (
                   <button
@@ -724,7 +754,8 @@ export default function RegisterWizard({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={loading}
+                    // 
+                    disabled={loading || submitting}
                     className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/30"
                   >
                     {loading ? "Processing..." : "Complete Registration"}
@@ -735,23 +766,36 @@ export default function RegisterWizard({
           ) : (
             <OtpVerification
               email={form.email}
-              loading={loading}
-              onVerify={async (otp: string) => {
-                try {
-                  setError("");
-                  setSuccess("");
+              // loading={loading && !showOtp}
 
-                  if (onVerifyOtp) {
-                    await onVerifyOtp(otp); // ✅ parent will redirect
-                  }
-                } catch (err: any) {
-                  setError(
-                    err?.response?.data?.message ||
-                      err?.response?.data?.detail ||
-                      "OTP verification failed",
-                  );
-                }
-              }}
+              loading={loading}
+              // externalError={error}
+             onVerify={async (otp: string) => {
+  setError("");
+  setSuccess("");
+
+  if (onVerifyOtp) {
+    await onVerifyOtp(otp);
+  }
+}}
+             onResend={async () => {
+  try {
+    setError("");
+    setSuccess("");
+
+    if (onResend) {
+      await onResend();
+    }
+
+    setSuccess("New OTP sent 📩");
+  } catch (err: any) {
+    setError(
+      err?.response?.data?.message ||
+      err?.response?.data?.detail ||
+      "Failed to resend OTP"
+    );
+  }
+}}
             />
           )}
         </div>
