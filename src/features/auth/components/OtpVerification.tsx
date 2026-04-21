@@ -19,7 +19,7 @@ export default function OtpVerification({
   const [success, setSuccess] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const [showSuccess, setShowSuccess] = useState(false);
+  // const [showSuccess, setShowSuccess] = useState(false);
   const [shake, setShake] = useState(false);
 
   const [attempts, setAttempts] = useState(0);
@@ -69,21 +69,15 @@ export default function OtpVerification({
   }, [resendBlocked]);
 
   // ✨ success animation
-  useEffect(() => {
-    if (success) {
-      setShowSuccess(true);
+ useEffect(() => {
+  if (success) {
+    const clear = setTimeout(() => {
+      setSuccess("");
+    }, 2000);
 
-      const fade = setTimeout(() => setShowSuccess(false), 1500);
-      const clear = setTimeout(() => {
-        setSuccess("");
-      }, 2000);
-
-      return () => {
-        clearTimeout(fade);
-        clearTimeout(clear);
-      };
-    }
-  }, [success]);
+    return () => clearTimeout(clear);
+  }
+}, [success]);
 
   // 🔢 Input change
   const handleChange = (value: string, index: number) => {
