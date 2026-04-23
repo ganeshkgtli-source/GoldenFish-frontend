@@ -7,6 +7,8 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import api from "@/lib/api";
 import OtpVerification from "./OtpVerification";
@@ -180,9 +182,9 @@ export default function RegisterWizard({
     if (currentStep === 1) {
       try {
         if (!form.phone) {
-  setError("Phone number is required");
-  return;
-}
+          setError("Phone number is required");
+          return;
+        }
         const res = await checkUserExists(
           form.username,
           form.email,
@@ -206,19 +208,19 @@ export default function RegisterWizard({
         setError("Please select an option to continue");
         return;
       }
-  if (hasDhanAccount === true) {
-  if (!accountType) {
-    setError("Please select account type");
-    return;
-  }
+      if (hasDhanAccount === true) {
+        if (!accountType) {
+          setError("Please select account type");
+          return;
+        }
 
-  setCurrentStep(3);
-} else {
-  window.open("https://dhan.co/", "_blank");
-  setError("Please create a Dhan account and come back to continue.");
-}
+        setCurrentStep(3);
+      } else {
+        window.open("https://dhan.co/", "_blank");
+        setError("Please create a Dhan account and come back to continue.");
+      }
 
-return;
+      return;
 
       return;
     }
@@ -236,10 +238,10 @@ return;
   };
 
   const handleSubmit = async () => {
-if (loading || submitting) return;
+    if (loading || submitting) return;
 
-if (!validateStep()) return;
-setSubmitting(true);
+    if (!validateStep()) return;
+    setSubmitting(true);
 
     if (!accountType) {
       setError("Please select account type");
@@ -283,14 +285,14 @@ setSubmitting(true);
       //     "Registration failed",
       // );
       setError(
-  err?.response?.data?.message ||
-  err?.response?.data?.error ||
-  err?.message ||
-  "Registration failed"
-)
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Registration failed",
+      );
     } finally {
-    setSubmitting(false); // ✅ ALWAYS reset
-  }
+      setSubmitting(false); // ✅ ALWAYS reset
+    }
   };
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
@@ -429,10 +431,12 @@ setSubmitting(true);
                           }));
 
                           if (phone && !phone.startsWith("+91")) {
-  setError("Only Indian mobile numbers are accepted");
-} else if (error === "Only Indian mobile numbers are accepted") {
-  setError("");
-}
+                            setError("Only Indian mobile numbers are accepted");
+                          } else if (
+                            error === "Only Indian mobile numbers are accepted"
+                          ) {
+                            setError("");
+                          }
                         }}
                       />
 
@@ -459,6 +463,7 @@ setSubmitting(true);
                       label="Password"
                       name="password"
                       type="password"
+                      enableToggle
                       placeholder="Minimum 8 characters"
                       value={form.password}
                       onChange={handleChange}
@@ -468,6 +473,7 @@ setSubmitting(true);
                       label="Confirm Password"
                       name="confirm_password"
                       type="password"
+                      enableToggle
                       placeholder="Re-enter your password"
                       value={form.confirm_password}
                       onChange={handleChange}
@@ -500,8 +506,8 @@ setSubmitting(true);
                               }`}
                               style={{
                                 width: form.password.length
-  ? `${(form.confirm_password.length / form.password.length) * 100}%`
-  : "0%"
+                                  ? `${(form.confirm_password.length / form.password.length) * 100}%`
+                                  : "0%",
                               }}
                             />
                           </div>
@@ -529,8 +535,6 @@ setSubmitting(true);
                                 : "Not Matching"}
                           </span>
                         </div>
-
-                         
                       </div>
                     )}
 
@@ -730,16 +734,16 @@ setSubmitting(true);
               </div>
 
               <div className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t flex justify-between">
-              {currentStep > 1 ? (
-  <button
-    onClick={handleBack}
-    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-red-600 transition"
-  >
-    <ChevronLeft className="inline w-4 h-4" /> Back
-  </button>
-) : (
-  <div /> // keeps layout spacing balanced
-)}
+                {currentStep > 1 ? (
+                  <button
+                    onClick={handleBack}
+                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-red-600 transition"
+                  >
+                    <ChevronLeft className="inline w-4 h-4" /> Back
+                  </button>
+                ) : (
+                  <div /> // keeps layout spacing balanced
+                )}
 
                 {currentStep < 3 ? (
                   <button
@@ -754,7 +758,7 @@ setSubmitting(true);
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    // 
+                    //
                     disabled={loading || submitting}
                     className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/30"
                   >
@@ -766,36 +770,35 @@ setSubmitting(true);
           ) : (
             <OtpVerification
               email={form.email}
-              // loading={loading && !showOtp}
-
               loading={loading}
-              // externalError={error}
-             onVerify={async (otp: string) => {
-  setError("");
-  setSuccess("");
+              onVerify={async (otp: string) => {
+                setError("");
+                setSuccess("");
 
-  if (onVerifyOtp) {
-    await onVerifyOtp(otp);
-  }
-}}
-             onResend={async () => {
-  try {
-    setError("");
-    setSuccess("");
+                if (onVerifyOtp) {
+                  await onVerifyOtp(otp);
+                }
+              }}
+              onResend={async () => {
+                try {
+                  setError("");
+                  setSuccess("");
 
-    if (onResend) {
-      await onResend();
-    }
+                  if (onResend) {
+                    await onResend();
+                  }
 
-    setSuccess("New OTP sent 📩");
-  } catch (err: any) {
-    setError(
-      err?.response?.data?.message ||
-      err?.response?.data?.detail ||
-      "Failed to resend OTP"
-    );
-  }
-}}
+                  setSuccess("New OTP sent 📩");
+                } catch (err: any) {
+                  setError(
+                    err?.response?.data?.message ||
+                      err?.response?.data?.detail ||
+                      "Failed to resend OTP",
+                  );
+                }
+              }}
+              title="Verify your email"
+              subtitle="Enter the 6-digit OTP sent to your email"
             />
           )}
         </div>
@@ -815,16 +818,47 @@ setSubmitting(true);
   );
 }
 
-function Field({ label, ...props }: any) {
+function Field({ label, type, enableToggle = false, ...props }: any) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const isPassword = type === "password";
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
       </label>
-      <input
-        {...props}
-        className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-500"
-      />
+
+      <div className="relative">
+        <input
+          {...props}
+          value={props.value || ""} // ✅ IMPORTANT FIX
+          type={isPassword && showPassword ? "text" : type}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={`w-full px-4 h-[52px] leading-none ${
+            enableToggle ? "pr-12 hide-browser-eye" : ""
+          } bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-500`}
+        />
+
+        {isPassword && enableToggle && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()} // ✅ FIX
+            onClick={() => setShowPassword((prev) => !prev)}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-200
+    ${
+      props.value && (isFocused || showPassword)
+        ? "opacity-100"
+        : "opacity-0 pointer-events-none"
+    }
+    text-slate-500 dark:text-slate-200 hover:text-red-500`}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

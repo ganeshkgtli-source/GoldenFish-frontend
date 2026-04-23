@@ -235,3 +235,13 @@
 .animate-shake {
   animation: otp-shake 0.4s ease;
 }
+.hide-browser-eye::-ms-reveal,
+.hide-browser-eye::-ms-clear {
+  display: none;
+}
+
+.hide-browser-eye::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}

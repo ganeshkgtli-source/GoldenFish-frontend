@@ -13,6 +13,11 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminClientsRouteImport } from './routes/admin/clients'
+import { Route as ResetPasswordUidTokenRouteImport } from './routes/reset-password.$uid.$token'
+import { Route as AdminSuperDashboardRouteImport } from './routes/admin/super/dashboard'
+import { Route as AdminClientIdRouteImport } from './routes/admin/client.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -34,18 +39,53 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminClientsRoute = AdminClientsRouteImport.update({
+  id: '/admin/clients',
+  path: '/admin/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordUidTokenRoute = ResetPasswordUidTokenRouteImport.update({
+  id: '/reset-password/$uid/$token',
+  path: '/reset-password/$uid/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSuperDashboardRoute = AdminSuperDashboardRouteImport.update({
+  id: '/admin/super/dashboard',
+  path: '/admin/super/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminClientIdRoute = AdminClientIdRouteImport.update({
+  id: '/admin/client/$id',
+  path: '/admin/client/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/clients': typeof AdminClientsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/client/$id': typeof AdminClientIdRoute
+  '/admin/super/dashboard': typeof AdminSuperDashboardRoute
+  '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/clients': typeof AdminClientsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/client/$id': typeof AdminClientIdRoute
+  '/admin/super/dashboard': typeof AdminSuperDashboardRoute
+  '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +93,46 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/clients': typeof AdminClientsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/client/$id': typeof AdminClientIdRoute
+  '/admin/super/dashboard': typeof AdminSuperDashboardRoute
+  '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/login'
+    | '/register'
+    | '/admin/clients'
+    | '/admin/dashboard'
+    | '/admin/client/$id'
+    | '/admin/super/dashboard'
+    | '/reset-password/$uid/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/login' | '/register'
-  id: '__root__' | '/' | '/home' | '/login' | '/register'
+  to:
+    | '/'
+    | '/home'
+    | '/login'
+    | '/register'
+    | '/admin/clients'
+    | '/admin/dashboard'
+    | '/admin/client/$id'
+    | '/admin/super/dashboard'
+    | '/reset-password/$uid/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/home'
+    | '/login'
+    | '/register'
+    | '/admin/clients'
+    | '/admin/dashboard'
+    | '/admin/client/$id'
+    | '/admin/super/dashboard'
+    | '/reset-password/$uid/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +140,11 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  AdminClientsRoute: typeof AdminClientsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminClientIdRoute: typeof AdminClientIdRoute
+  AdminSuperDashboardRoute: typeof AdminSuperDashboardRoute
+  ResetPasswordUidTokenRoute: typeof ResetPasswordUidTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +177,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/clients': {
+      id: '/admin/clients'
+      path: '/admin/clients'
+      fullPath: '/admin/clients'
+      preLoaderRoute: typeof AdminClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password/$uid/$token': {
+      id: '/reset-password/$uid/$token'
+      path: '/reset-password/$uid/$token'
+      fullPath: '/reset-password/$uid/$token'
+      preLoaderRoute: typeof ResetPasswordUidTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/super/dashboard': {
+      id: '/admin/super/dashboard'
+      path: '/admin/super/dashboard'
+      fullPath: '/admin/super/dashboard'
+      preLoaderRoute: typeof AdminSuperDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/client/$id': {
+      id: '/admin/client/$id'
+      path: '/admin/client/$id'
+      fullPath: '/admin/client/$id'
+      preLoaderRoute: typeof AdminClientIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +220,11 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AdminClientsRoute: AdminClientsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminClientIdRoute: AdminClientIdRoute,
+  AdminSuperDashboardRoute: AdminSuperDashboardRoute,
+  ResetPasswordUidTokenRoute: ResetPasswordUidTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

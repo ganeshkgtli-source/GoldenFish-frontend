@@ -1,9 +1,16 @@
 import axios from "axios";
 
+/* ================= STORAGE HELPER ================= */
+const getStorage = () => {
+  return localStorage.getItem("rememberMe") === "true"
+    ? localStorage
+    : sessionStorage;
+};
+
 /* ================= API INSTANCE ================= */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  timeout: 10000, // ✅ prevents hanging requests
+  timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,14 +18,17 @@ const api = axios.create({
 
 /* ================= AUTH HEADER ================= */
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access");
+  const storage = getStorage();
+  const token = storage.getItem("access");
 
   const publicRoutes = [
     "/register/",
     "/login/",
     "/verify-email/",
-    "/resend-email-otp/", // ✅ added
+    "/resend-email-otp/",
     "/token/refresh/",
+    "/forgot-password/",   // ✅ NEW
+    "/reset-password/",    // ✅ NEW
   ];
 
   const isPublicRoute = publicRoutes.some((route) =>
@@ -42,6 +52,9 @@ export const logout = () => {
 
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  sessionStorage.removeItem("access");
+  sessionStorage.removeItem("refresh");
+  localStorage.removeItem("rememberMe");
 
   window.location.href = "/login";
 };
@@ -52,19 +65,20 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 
   refreshPromise = (async () => {
     try {
-      const refresh = localStorage.getItem("refresh");
+      const storage = getStorage();
+      const refresh = storage.getItem("refresh");
 
       if (!refresh) throw new Error("No refresh token");
 
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/token/refresh/`,
+        `${import.meta.env.VITE_API_URL}token/refresh/`,
         { refresh }
       );
 
-      localStorage.setItem("access", res.data.access);
+      storage.setItem("access", res.data.access);
 
       if (res.data.refresh) {
-        localStorage.setItem("refresh", res.data.refresh);
+        storage.setItem("refresh", res.data.refresh);
       }
 
       if (import.meta.env.DEV) {
@@ -91,7 +105,11 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 export const startRefreshTimer = () => {
   stopRefreshTimer();
 
-  if (!localStorage.getItem("access")) return; // ✅ safety
+  const remember = localStorage.getItem("rememberMe") === "true";
+  if (!remember) return; // ❗ only for remembered sessions
+
+  const storage = getStorage();
+  if (!storage.getItem("access")) return;
 
   refreshTimer = setInterval(async () => {
     await refreshAccessToken();
@@ -112,7 +130,8 @@ export const stopRefreshTimer = () => {
 
 /* ================= SESSION VALIDATION ================= */
 export const validateSession = async () => {
-  const refresh = localStorage.getItem("refresh");
+  const storage = getStorage();
+  const refresh = storage.getItem("refresh");
 
   if (!refresh) {
     logout();
@@ -130,14 +149,16 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (!originalRequest) return Promise.reject(error); // ✅ safety
+    if (!originalRequest) return Promise.reject(error);
 
     const authExcludedRoutes = [
       "/register/",
       "/login/",
       "/verify-email/",
-      "/resend-email-otp/", // ✅ added
+      "/resend-email-otp/",
       "/token/refresh/",
+      "/forgot-password/",   // ✅ NEW
+      "/reset-password/",    // ✅ NEW
     ];
 
     const shouldSkipRefresh = authExcludedRoutes.some((route) =>
@@ -154,8 +175,10 @@ api.interceptors.response.use(
       const success = await refreshAccessToken();
 
       if (success) {
+        const storage = getStorage();
+
         originalRequest.headers.Authorization =
-          `Bearer ${localStorage.getItem("access")}`;
+          `Bearer ${storage.getItem("access")}`;
 
         return api(originalRequest);
       }
@@ -166,3 +189,16 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/* ================= OPTIONAL HELPERS ================= */
+
+export const forgotPassword = async (email: string) => {
+  return api.post("/forgot-password/", { email });
+};
+
+export const resetPassword = async (data: {
+  token: string;
+  password: string;
+}) => {
+  return api.post("/reset-password/", data);
+};

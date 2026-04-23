@@ -1,20 +1,26 @@
 import { TrendingUp, LogOut, User, Activity } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import ThemeToggle from "../../auth/components/ThemeToggle";
+import { useLogout } from "@/features/auth/hooks/useAuth";
 
 export default function HomePage() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
+  // ✅ use logout hook
+  const logoutMutation = useLogout();
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync(); // ✅ backend logout
+    } catch (err) {
+      console.log("Logout failed (safe to ignore)");
+    }
+
     navigate({ to: "/login" });
   };
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F]">
-
-      {/* ❌ REMOVED THEME TOGGLE FROM HERE */}
 
       {/* NAVBAR */}
       <div className="w-full border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4 flex items-center justify-between">
@@ -32,7 +38,7 @@ export default function HomePage() {
         {/* ACTIONS */}
         <div className="flex items-center gap-4">
 
-          {/* ✅ THEME TOGGLE INSIDE NAVBAR */}
+          {/* THEME TOGGLE */}
           <ThemeToggle variant="inline" />
 
           <button className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -42,10 +48,11 @@ export default function HomePage() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-red-600"
+            disabled={logoutMutation.isPending}
+            className="flex items-center gap-2 text-sm text-red-600 disabled:opacity-50"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
           </button>
         </div>
       </div>
@@ -54,10 +61,11 @@ export default function HomePage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
 
         {/* WELCOME CARD */}
-        <div className="rounded-3xl p-8 mb-8 shadow-xl border border-slate-200 dark:border-slate-800 
+        <div
+          className="rounded-3xl p-8 mb-8 shadow-xl border border-slate-200 dark:border-slate-800 
           bg-gradient-to-br from-slate-100 via-white to-slate-200
-          dark:from-slate-900 dark:via-slate-800 dark:to-slate-900
-        ">
+          dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+        >
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
             Welcome back 👋
           </h2>

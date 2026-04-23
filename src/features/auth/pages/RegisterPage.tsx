@@ -8,7 +8,7 @@ import {
   useRegister,
   useResendOtp,
   useVerifyOtp,
-} from "../hooks/useRegister";
+} from "../hooks/useAuth";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
