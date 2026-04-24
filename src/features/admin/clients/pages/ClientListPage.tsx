@@ -1,5 +1,6 @@
 import { useClients } from "../hooks/useClients";
 import { useNavigate } from "@tanstack/react-router";
+import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
 
 export default function ClientListPage() {
   const { data, isLoading } = useClients();
@@ -9,6 +10,8 @@ export default function ClientListPage() {
 
   return (
     <div>
+            <ManagementAdminNavbar   />
+      
       <h1 className="text-xl font-bold mb-4">Clients</h1>
 
       <div className="space-y-2">

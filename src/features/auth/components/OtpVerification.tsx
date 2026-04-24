@@ -5,11 +5,20 @@ interface Props {
   email: string;
   loading: boolean;
   onVerify: (otp: string) => Promise<void>;
-  onResend?: () => Promise<void>;
+  onResend?: () => Promise<{ message?: string }>;
   title?: string;
   subtitle?: string;
 }
 
+const formatTime = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+
+  const mm = m.toString().padStart(2, "0");
+  const ss = s.toString().padStart(2, "0");
+
+  return `${mm}:${ss}`;
+};
 export default function OtpVerification({
   email,
   onVerify,
@@ -22,16 +31,16 @@ export default function OtpVerification({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [shake, setShake] = useState(false);
+  //  const blockRef = useRef(false);
 
   const [blocked, setBlocked] = useState(false);
-  const [resendBlocked, setResendBlocked] = useState(false);
 
-  const [timer, setTimer] = useState(60);
+  const [timer, setTimer] = useState(30);
 
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSubmittedOtp = useRef<string | null>(null);
-
+  const resendLock = useRef(false);
   /* ================= AUTO FOCUS ================= */
   useEffect(() => {
     inputsRef.current[0]?.focus();
@@ -39,21 +48,21 @@ export default function OtpVerification({
 
   /* ================= TIMER FIX ================= */
   useEffect(() => {
-    if (timer <= 0) return;
+    if (timer <= 0) {
+      setTimer(0);
+
+      // ✅ ADD THIS LINE
+      setBlocked(false);
+
+      return;
+    }
 
     const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimer((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(interval);
   }, [timer]);
-
   /* ================= SUCCESS MESSAGE ================= */
   useEffect(() => {
     if (!success) return;
@@ -117,7 +126,8 @@ export default function OtpVerification({
     }
 
     try {
-      await onVerify(code);
+      const res = await onVerify(code);
+      console.log("Verify response:", res);
 
       setSuccess("Verified successfully");
       setOtp(["", "", "", "", "", ""]);
@@ -125,13 +135,16 @@ export default function OtpVerification({
       const data = err?.response?.data;
 
       triggerShake();
-      setOtp(["", "", "", "", "", ""]);
-      inputsRef.current[0]?.focus();
+      // setOtp(["", "", "", "", "", ""]);
+      inputsRef.current[5]?.focus();
 
       // 🔥 BACKEND BLOCK HANDLING
       if (data?.blocked) {
         setBlocked(true);
-        setError("Too many attempts. Please request a new OTP.");
+        if (data.remaining_time) {
+          setTimer(data.remaining_time);
+        }
+        setError("Too many attempts. Try later.");
         return;
       }
 
@@ -165,8 +178,16 @@ export default function OtpVerification({
   }, [otp, loading, blocked, success]);
 
   /* ================= RESEND ================= */
+
   const handleResend = async () => {
-    if (timer > 0 || resendBlocked) return;
+    if (resendLock.current) return;
+    resendLock.current = true;
+
+    if (timer > 0) {
+      setError(`Please wait ${formatTime(timer)} before requesting again`);
+      resendLock.current = false;
+      return;
+    }
 
     setError("");
     setSuccess("");
@@ -175,35 +196,61 @@ export default function OtpVerification({
     lastSubmittedOtp.current = null;
 
     try {
-      if (onResend) {
-        await onResend();
-      }
+      const res = await onResend?.();
+      console.log("Resend response:", res || "No response returned");
 
-      setSuccess("New OTP sent successfully");
-      setTimer(60);
+      // ✅ SUCCESS
+      if (res) {
+        setSuccess(res.message ?? "OTP sent");
+      } else {
+        setSuccess("OTP sent");
+      }
+      setTimer(30); // match backend cooldown (30s)
+
       inputsRef.current[0]?.focus();
     } catch (err: any) {
       const data = err?.response?.data;
 
-      // 🔥 RESEND BLOCK HANDLING
+      // =============================
+      // 🔥 BLOCK (5 MIN)
+      // =============================
       if (data?.blocked) {
-        setResendBlocked(true);
+        const seconds = Number(data?.remaining_time) || 300;
 
-        const remaining = data.remaining_time || 300;
-
+        setBlocked(true);
+        setTimer(seconds);
         setError(
-          `Too many attempts. Blocked for ${Math.ceil(remaining / 60)} minutes.`,
+          `You're temporarily blocked. Try again after ${formatTime(seconds)}`,
         );
-
-        setTimer(remaining);
         return;
       }
 
+      // =============================
+      // 🔥 COOLDOWN (30 SEC)
+      // =============================
+      if (
+        data?.message?.toLowerCase().includes("please wait") &&
+        /\d+/.test(data.message)
+      ) {
+        const seconds =
+          Number(data?.remaining_time) ||
+          parseInt(data?.message?.match(/\d+/)?.[0] || "30");
+
+        setTimer(seconds);
+        setError(`Wait ${formatTime(seconds)} before retry`);
+        return;
+      }
+
+      // =============================
       // 🔥 NORMAL ERROR
-      setError(data?.message || data?.error || "Failed to resend OTP");
+      // =============================
+      setError(data?.message || "Failed to resend OTP");
+    } finally {
+      setTimeout(() => {
+        resendLock.current = false;
+      }, 300);
     }
   };
-
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl p-8 text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-600/10 flex items-center justify-center mx-auto mb-6">
@@ -270,17 +317,31 @@ export default function OtpVerification({
       <p className="text-xs mt-4">
         Didn’t receive OTP?{" "}
         <span
-          onClick={handleResend}
+          onClick={() => {
+            if (blocked && timer > 0) {
+              setError(
+                `You're temporarily blocked. Try again after ${formatTime(timer)}`,
+              );
+              return;
+            }
+            if (timer > 0) {
+              setError(
+                `Please wait ${formatTime(timer)} before requesting again`,
+              );
+              return;
+            }
+            handleResend();
+          }}
           className={`${
-            timer > 0 || resendBlocked
+            blocked || timer > 0
               ? "text-gray-400 cursor-not-allowed"
               : "text-red-500 cursor-pointer hover:underline"
           }`}
         >
-          {resendBlocked
-            ? `Blocked (${timer}s)`
+          {blocked && timer > 0
+            ? `Blocked (${formatTime(timer)})`
             : timer > 0
-              ? `Resend in ${timer}s`
+              ? `Resend in ${formatTime(timer)}`
               : "Resend"}
         </span>
       </p>

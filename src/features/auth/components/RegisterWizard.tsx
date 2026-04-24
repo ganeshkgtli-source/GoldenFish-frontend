@@ -732,14 +732,16 @@ export default function RegisterWizard({
                   </div>
                 )}
               </div>
-
-              <div className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t flex justify-between">
+              <div
+                className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t 
+flex items-center justify-between gap-3"
+              >
                 {currentStep > 1 ? (
                   <button
                     onClick={handleBack}
-                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-red-600 transition"
+                    className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 transition shrink-0"
                   >
-                    <ChevronLeft className="inline w-4 h-4" /> Back
+                    <ChevronLeft className="w-4 h-4" /> Back
                   </button>
                 ) : (
                   <div /> // keeps layout spacing balanced
@@ -749,7 +751,23 @@ export default function RegisterWizard({
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-red-500/30"
+                    className="
+    flex items-center gap-1
+
+    px-3 sm:px-5
+    py-2  
+
+    text-sm sm:text-base font-medium
+
+    bg-red-600 hover:bg-red-700 text-white
+
+    rounded-lg
+    transition-all duration-200
+
+    shadow-md shadow-red-500/20
+
+    whitespace-nowrap
+  "
                   >
                     Next
                     <ChevronRight className="w-4 h-4" />
@@ -758,9 +776,26 @@ export default function RegisterWizard({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    //
                     disabled={loading || submitting}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/30"
+                    className="
+    flex items-center justify-center
+
+    px-4 sm:px-6
+    py-2.5
+
+    text-sm sm:text-base font-medium
+
+    bg-red-600 hover:bg-red-700 text-white
+
+    rounded-lg
+    transition-all duration-200
+
+    disabled:opacity-50 disabled:cursor-not-allowed
+
+    shadow-md shadow-red-500/20
+
+    whitespace-nowrap   /* 🔥 IMPORTANT */
+  "
                   >
                     {loading ? "Processing..." : "Complete Registration"}
                   </button>
@@ -784,17 +819,21 @@ export default function RegisterWizard({
                   setError("");
                   setSuccess("");
 
-                  if (onResend) {
-                    await onResend();
+                  if (!onResend) {
+                    return { message: "No handler" }; // ✅ never return null
                   }
 
-                  setSuccess("New OTP sent 📩");
+                  const res = await onResend();
+
+                  return res ?? { message: "OTP sent" }; // ✅ fallback object
                 } catch (err: any) {
                   setError(
                     err?.response?.data?.message ||
                       err?.response?.data?.detail ||
                       "Failed to resend OTP",
                   );
+
+                  throw err; // ✅ keep error flow
                 }
               }}
               title="Verify your email"

@@ -36,18 +36,24 @@ export const verifyOtp = async (email: string, otp: string) => {
 };
 
 /* ================= RESEND OTP ================= */
+import axios from "axios";
+
 export const resendOtp = async (email: string) => {
-  const res = await api.post("/resend-email-otp/", { email });
+  try {
+    const res = await api.post("/resend-email-otp/", { email });
+    console.log("Resend OTP response:",res,"data:", res.data); 
+    return res.data;
 
-  if (res.data.status === "error" || res.data.error) {
-    throw new Error(
-      res.data.message ||
-      res.data.error ||
-      "Failed to resend OTP"
-    );
+  } catch (err: any) {
+    // 🔥 VERY IMPORTANT: preserve backend response
+    console.error("Resend OTP error:", err);
+    if (axios.isAxiosError(err) && err.response) {
+      throw err; // ✅ keep full response (blocked, remaining_time, etc)
+    }
+
+    // fallback
+    throw new Error("Network error");
   }
-
-  return res.data;
 };
 
 /* ================= FORGOT PASSWORD ================= */

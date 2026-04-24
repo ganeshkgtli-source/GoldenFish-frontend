@@ -113,9 +113,14 @@ export default function LoginPage() {
   };
 
   /* ================= RESEND OTP ================= */
-  const handleResend = async () => {
-    await resendMutation.mutateAsync(email);
-  };
+const handleResend = async () => {
+  try {
+    const res = await resendMutation.mutateAsync(email);
+    return res;
+  } catch (err) {
+    throw err; // ✅ let OtpVerification handle block/cooldown
+  }
+};
 
   const handleForgotPassword = async () => {
     if (cooldown > 0) return;

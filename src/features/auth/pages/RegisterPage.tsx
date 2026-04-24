@@ -20,45 +20,43 @@ export default function RegisterPage() {
   const [registeredEmail, setRegisteredEmail] = useState("");
 
   /* ================= RESEND OTP ================= */
-  const handleResendOtp = async () => {
-    if (!registeredEmail) return;
+ const handleResendOtp = async () => {
+  if (!registeredEmail) return null;
 
-    // ❗ let errors bubble to OTP component
-    await resendMutation.mutateAsync(registeredEmail);
-  };
-
+  const data = await resendMutation.mutateAsync(registeredEmail);
+  return data; // ✅ explicit return
+};
   /* ================= REGISTER ================= */
   const handleRegister = async (data: any) => {
     try {
       await registerMutation.mutateAsync(data);
-
-      // ✅ normalize email
       setRegisteredEmail(data.email.trim().toLowerCase());
     } catch (err) {
-      // ❗ let RegisterWizard handle error
       throw err;
     }
   };
 
   /* ================= VERIFY OTP ================= */
-const handleVerifyOtp = async (otp: string) => {
-  if (!registeredEmail) {
-    throw new Error("Email not found. Please register again.");
-  }
+  const handleVerifyOtp = async (otp: string) => {
+    if (!registeredEmail) {
+      throw new Error("Email not found. Please register again.");
+    }
 
-  await verifyMutation.mutateAsync({
-    email: registeredEmail,
-    otp,
-  });
+    await verifyMutation.mutateAsync({
+      email: registeredEmail,
+      otp,
+    });
 
-  // ✅ Redirect to login for full authentication
-  navigate({ to: "/login" });
-};
+    navigate({ to: "/login" });
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 transition-colors duration-300">
+      
+      {/* THEME BUTTON */}
       <ThemeToggle variant="floating" />
 
+      {/* CONTENT */}
       <RegisterWizard
         onSubmit={handleRegister}
         onVerifyOtp={handleVerifyOtp}

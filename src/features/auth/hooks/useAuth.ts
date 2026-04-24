@@ -39,7 +39,10 @@ export const useVerifyOtp = () => {
 /* ================= RESEND OTP ================= */
 export const useResendOtp = () => {
   return useMutation({
-    mutationFn: (email: string) => resendOtp(email),
+    mutationFn: async (email: string) => {
+      const data = await resendOtp(email);
+      return data; // ✅ explicitly return
+    },
   });
 };
 
