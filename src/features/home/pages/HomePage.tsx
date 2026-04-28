@@ -2,12 +2,17 @@ import { TrendingUp, LogOut, User, Activity } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import ThemeToggle from "../../auth/components/ThemeToggle";
 import { useLogout } from "@/features/auth/hooks/useAuth";
+import { useProfile } from "@/features/auth/hooks/useAuth";
+
+import { useState, useEffect } from "react";
+import { userService } from "@/lib/auth";
 
 export default function HomePage() {
   const navigate = useNavigate();
-
+const [username, setUsername] = useState<string | null>(null);
   // ✅ use logout hook
   const logoutMutation = useLogout();
+  const profileMutation = useProfile();
 
   const handleLogout = async () => {
     try {
@@ -18,7 +23,24 @@ export default function HomePage() {
 
     navigate({ to: "/login" });
   };
+const handleProfileClick = async () => {
+  try {
+  const res = await profileMutation.mutateAsync();
 
+    console.log("PROFILE:", res);
+
+  } catch (err) {
+    console.log("Failed to fetch profile");
+  }
+};
+useEffect(() => {
+  setUsername(userService.get());
+
+  const sync = () => setUsername(userService.get());
+
+  window.addEventListener("storage", sync);
+  return () => window.removeEventListener("storage", sync);
+}, []);
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F]">
 
@@ -41,10 +63,12 @@ export default function HomePage() {
           {/* THEME TOGGLE */}
           <ThemeToggle variant="inline" />
 
-          <button className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <User className="w-4 h-4" />
-            Profile
-          </button>
+      <button
+  onClick={handleProfileClick}
+  className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+>
+  <User className="w-4 h-4" />
+{username ? username : "Profile"}</button>
 
           <button
             onClick={handleLogout}
@@ -67,8 +91,7 @@ export default function HomePage() {
           dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
         >
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
-            Welcome back 👋
-          </h2>
+Welcome back {username ? username.charAt(0).toUpperCase() + username.slice(1) : "👋"}</h2>
           <p className="text-slate-600 dark:text-slate-300 mt-2">
             Manage your trading activity and monitor performance.
           </p>

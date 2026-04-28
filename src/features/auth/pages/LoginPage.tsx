@@ -18,7 +18,7 @@ import {
 } from "../hooks/useAuth";
 import ThemeToggle from "../components/ThemeToggle";
 import OtpVerification from "../components/OtpVerification";
-
+import { tokenService, roleService  ,userService } from "@/lib/auth";
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -46,49 +46,88 @@ export default function LoginPage() {
   // ✅ COOLDOWN TIMER
   const [cooldown, setCooldown] = useState(0);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
-
+ 
   /* ================= LOGIN ================= */
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    setError("");
 
-    try {
-      const res = await loginMutation.mutateAsync(form);
+const handleSubmit = async (e: any) => {
+  e.preventDefault();
+  setError("");
 
-      // ✅ STORE TOKENS ONLY HERE
-      const storage = rememberMe ? localStorage : sessionStorage;
+  try {
+    const res = await loginMutation.mutateAsync(form);
 
-      storage.setItem("access", res.tokens.access);
-      storage.setItem("refresh", res.tokens.refresh);
+    /* ================= STORE AUTH ================= */
 
-      // ✅ OPTIONAL REDIRECT
-      if (res.dhan_login_url) {
-        window.location.href = res.dhan_login_url;
-        return;
-      }
+    // ✅ remember me flag
+    localStorage.setItem("rememberMe", rememberMe ? "true" : "false");
 
-      navigate({ to: res.redirect_to || "/home" });
-    } catch (err: any) {
-      const data = err?.response?.data;
+    // ✅ store tokens
+    tokenService.set(res.tokens.access, res.tokens.refresh);
 
-      // ✅ EMAIL NOT VERIFIED → SHOW OTP
-      if (data?.email_verification_required) {
-        setEmail(data.email);
-        setShowOtp(true);
-        setError(""); // clear login error
-        return;
-      }
+    /* ================= ROLE FIX ================= */
 
-      setError(
-        data?.message ||
-          data?.error ||
-          data?.detail ||
-          err?.message ||
-          "Invalid credentials",
-      );
+    const roleMap: Record<string, "admin" | "super_admin" | "user"> = {
+      ADMIN: "admin",
+      SUPER_ADMIN: "super_admin",
+      USER: "user",
+    };
+
+    const role = roleMap[res.role];
+
+    if (role) {
+      roleService.set(role);
     }
-  };
 
+    /* ================= USERNAME (🔥 THIS WAS MISSING) ================= */
+
+    if (res.username) {
+      userService.set(res.username); // ✅ FIX
+    }
+
+    /* ================= EXTERNAL REDIRECT ================= */
+
+    if (res.dhan_login_url) {
+      window.location.href = res.dhan_login_url;
+      return;
+    }
+
+    /* ================= BACKEND REDIRECT ================= */
+
+    if (res.redirect_to) {
+      navigate({ to: res.redirect_to });
+      return;
+    }
+
+    /* ================= FALLBACK ================= */
+
+    if (role === "super_admin") {
+      navigate({ to: "/super-admin/dashboard" });
+    } else if (role === "admin") {
+      navigate({ to: "/admin/dashboard" });
+    } else {
+      navigate({ to: "/home" });
+    }
+
+  } catch (err: any) {
+    const data = err?.response?.data;
+
+    // ✅ EMAIL NOT VERIFIED → SHOW OTP
+    if (data?.email_verification_required) {
+      setEmail(data.email);
+      setShowOtp(true);
+      setError("");
+      return;
+    }
+
+    setError(
+      data?.message ||
+      data?.error ||
+      data?.detail ||
+      err?.message ||
+      "Invalid credentials"
+    );
+  }
+};
   /* ================= VERIFY OTP ================= */
   const handleVerifyOtp = async (otp: string) => {
     if (!email) {

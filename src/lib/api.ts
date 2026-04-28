@@ -1,96 +1,110 @@
 import axios from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
+import { jwtDecode } from "jwt-decode";
+import { tokenService } from "@/lib/auth";
 
-/* ================= STORAGE HELPER ================= */
-const getStorage = () => {
-  return localStorage.getItem("rememberMe") === "true"
-    ? localStorage
-    : sessionStorage;
-};
+/* ================= ENV ================= */
 
-/* ================= API INSTANCE ================= */
+const BASE_URL = import.meta.env.VITE_API_URL;
+if (!BASE_URL) throw new Error("VITE_API_URL is missing");
+
+/* ================= AXIOS INSTANCE ================= */
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: BASE_URL,
   timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-/* ================= AUTH HEADER ================= */
-api.interceptors.request.use((config) => {
-  const storage = getStorage();
-  const token = storage.getItem("access");
+/* ================= PUBLIC ROUTES ================= */
 
-  const publicRoutes = [
-    "/register/",
-    "/login/",
-    "/verify-email/",
-    "/resend-email-otp/",
-    "/token/refresh/",
-    "/forgot-password/",   // ✅ NEW
-    "/reset-password/",    // ✅ NEW
-  ];
+const PUBLIC_ROUTES = new Set([
+  "/register/",
+  "/login/",
+  "/verify-email/",
+  "/resend-email-otp/",
+  "/token/refresh/",
+  "/forgot-password/",
+  "/reset-password/",
+]);
 
-  const isPublicRoute = publicRoutes.some((route) =>
-    config.url?.includes(route)
-  );
+/* ================= REQUEST INTERCEPTOR ================= */
 
-  if (token && !isPublicRoute) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = tokenService.getAccess();
+
+    if (token && config.url && !PUBLIC_ROUTES.has(config.url)) {
+      config.headers.set("Authorization", `Bearer ${token}`);
+    }
+
+    return config;
   }
-
-  return config;
-});
+);
 
 /* ================= REFRESH CONTROL ================= */
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
 let refreshPromise: Promise<boolean> | null = null;
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
-/* ================= LOGOUT ================= */
-export const logout = () => {
-  stopRefreshTimer();
+/* ================= TOKEN EXPIRY ================= */
 
-  localStorage.removeItem("access");
-  localStorage.removeItem("refresh");
-  sessionStorage.removeItem("access");
-  sessionStorage.removeItem("refresh");
-  localStorage.removeItem("rememberMe");
-
-  window.location.href = "/login";
+const getRefreshDelay = (token: string) => {
+  try {
+    const decoded: any = jwtDecode(token);
+    return Math.max(decoded.exp * 1000 - Date.now() - 5000, 0);
+  } catch {
+    return 0;
+  }
 };
 
-/* ================= REFRESH TOKEN ================= */
+/* ================= SCHEDULER ================= */
+
+const scheduleRefresh = (token: string) => {
+  stopRefresh();
+
+  const delay = getRefreshDelay(token);
+
+  refreshTimeout = setTimeout(() => {
+    refreshAccessToken();
+  }, delay);
+};
+
+const stopRefresh = () => {
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout);
+    refreshTimeout = null;
+  }
+};
+
+/* ================= LOGOUT ================= */
+
+export const logout = () => {
+  stopRefresh();
+  tokenService.clear();
+
+  window.location.href = "/login"; // ✅ important
+};
+
+/* ================= REFRESH ================= */
+
 export const refreshAccessToken = async (): Promise<boolean> => {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
     try {
-      const storage = getStorage();
-      const refresh = storage.getItem("refresh");
-
+      const refresh = tokenService.getRefresh();
       if (!refresh) throw new Error("No refresh token");
 
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}token/refresh/`,
-        { refresh }
-      );
+      const res = await axios.post(`${BASE_URL}token/refresh/`, {
+        refresh,
+      });
 
-      storage.setItem("access", res.data.access);
-
-      if (res.data.refresh) {
-        storage.setItem("refresh", res.data.refresh);
-      }
-
-      if (import.meta.env.DEV) {
-        console.log("✅ Access token refreshed");
-      }
+      tokenService.set(res.data.access, res.data.refresh);
+      scheduleRefresh(res.data.access);
 
       return true;
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.log("❌ Refresh failed");
-      }
-
+    } catch {
       logout();
       return false;
     } finally {
@@ -101,86 +115,47 @@ export const refreshAccessToken = async (): Promise<boolean> => {
   return refreshPromise;
 };
 
-/* ================= AUTO REFRESH TIMER ================= */
-export const startRefreshTimer = () => {
-  stopRefreshTimer();
+/* ================= INIT SESSION ================= */
 
-  const remember = localStorage.getItem("rememberMe") === "true";
-  if (!remember) return; // ❗ only for remembered sessions
+export const initApiAuth = () => {
+  const token = tokenService.getAccess();
+  const refresh = tokenService.getRefresh();
 
-  const storage = getStorage();
-  if (!storage.getItem("access")) return;
-
-  refreshTimer = setInterval(async () => {
-    await refreshAccessToken();
-  }, 50 * 1000);
-
-  if (import.meta.env.DEV) {
-    console.log("⏱️ Auto refresh started");
-  }
-};
-
-/* ================= STOP TIMER ================= */
-export const stopRefreshTimer = () => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-};
-
-/* ================= SESSION VALIDATION ================= */
-export const validateSession = async () => {
-  const storage = getStorage();
-  const refresh = storage.getItem("refresh");
-
-  if (!refresh) {
+  if (!token || !refresh) {
     logout();
     return false;
   }
 
-  startRefreshTimer();
+  scheduleRefresh(token);
   return true;
 };
 
-/* ================= 401 FALLBACK ================= */
+/* ================= RESPONSE INTERCEPTOR ================= */
+
 api.interceptors.response.use(
-  (response) => response,
-
+  (res) => res,
   async (error) => {
-    const originalRequest = error.config;
+    const req: any = error.config;
+    if (!req) return Promise.reject(error);
 
-    if (!originalRequest) return Promise.reject(error);
-
-    const authExcludedRoutes = [
-      "/register/",
-      "/login/",
-      "/verify-email/",
-      "/resend-email-otp/",
-      "/token/refresh/",
-      "/forgot-password/",   // ✅ NEW
-      "/reset-password/",    // ✅ NEW
-    ];
-
-    const shouldSkipRefresh = authExcludedRoutes.some((route) =>
-      originalRequest.url?.includes(route)
-    );
+    const isPublic = PUBLIC_ROUTES.has(req.url);
+    req._retryCount = req._retryCount || 0;
 
     if (
       error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !shouldSkipRefresh
+      !isPublic &&
+      req._retryCount < 1
     ) {
-      originalRequest._retry = true;
+      req._retryCount++;
 
       const success = await refreshAccessToken();
 
       if (success) {
-        const storage = getStorage();
-
-        originalRequest.headers.Authorization =
-          `Bearer ${storage.getItem("access")}`;
-
-        return api(originalRequest);
+        req.headers.set(
+          "Authorization",
+          `Bearer ${tokenService.getAccess()}`
+        );
+        return api(req);
       }
     }
 
@@ -188,17 +163,12 @@ api.interceptors.response.use(
   }
 );
 
+/* ================= CROSS TAB SYNC ================= */
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "access" && !e.newValue) {
+    logout();
+  }
+});
+
 export default api;
-
-/* ================= OPTIONAL HELPERS ================= */
-
-export const forgotPassword = async (email: string) => {
-  return api.post("/forgot-password/", { email });
-};
-
-export const resetPassword = async (data: {
-  token: string;
-  password: string;
-}) => {
-  return api.post("/reset-password/", data);
-};
