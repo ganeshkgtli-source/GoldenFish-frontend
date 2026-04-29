@@ -428,9 +428,7 @@ function TradeRow({ client, symbol, type, qty, price }: any) {
       </div>
 
       <div />
-      <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border mt-auto">
-        © 2026 GoldenFish • Management Panel
-      </footer>
+      
     </div>
   );
 }
