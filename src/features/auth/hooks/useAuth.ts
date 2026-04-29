@@ -11,36 +11,36 @@ import {
  
 } from "../api/authApi";
 import type { UserProfile } from "../api/authApi";
-import { normalizeRole } from "@/lib/auth";
+import { normalizeRole, roleService, sessionService, tokenService } from "@/lib/auth";
 
 /* ================= LOGIN ================= */
 export const useLogin = () => {
-  const queryClient = useQueryClient();
+const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: loginUser,
+return useMutation({
+mutationFn: loginUser,
 
-    onSuccess: (data) => {
-      /* ================= STORAGE ================= */
+onSuccess: (data) => {
+  /* ================= STORE AUTH ================= */
 
-      // rememberMe already set in UI
-      const rememberMe = localStorage.getItem("rememberMe") === "true";
-      const storage = rememberMe ? localStorage : sessionStorage;
+  // ✅ ALWAYS store tokens in localStorage (via service)
+  tokenService.set(data.tokens.access, data.tokens.refresh);
 
-      // ✅ FIX: correct token path
-      storage.setItem("access", data.tokens.access);
-      storage.setItem("refresh", data.tokens.refresh);
+  // ✅ normalize and store role
+  const role = normalizeRole(data.role);
+  roleService.set(role);
 
-      // ✅ normalize + store role
-      const role = normalizeRole(data.role);
-      storage.setItem("role", role);
+  // ✅ start session (important for non-remember users)
+  sessionService.start();
 
-      /* ================= REFETCH ================= */
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-    },
+  /* ================= REFETCH ================= */
 
-    retry: 1,
-  });
+  queryClient.invalidateQueries({ queryKey: ["profile"] });
+},
+
+retry: 1,
+
+});
 };
 
 /* ================= REGISTER ================= */

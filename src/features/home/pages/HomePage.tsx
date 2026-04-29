@@ -9,7 +9,7 @@ import { userService } from "@/lib/auth";
 
 export default function HomePage() {
   const navigate = useNavigate();
-const [username, setUsername] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   // ✅ use logout hook
   const logoutMutation = useLogout();
   const profileMutation = useProfile();

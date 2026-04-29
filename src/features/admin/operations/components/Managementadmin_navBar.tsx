@@ -32,7 +32,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, to: "/admin/dashboard" },
     { label: "Clients", icon: Users, to: "/admin/clients" },
-    { label: "Add Clients", icon: UserPlus, to: "/admin/add" },
+    { label: "Add Clients", icon: UserPlus, to: "/register" },
     { label: "Order Logs", icon: FileText, to: "/admin/orders" },
     { label: "Error Logs", icon: AlertTriangle, to: "/admin/errors" },
   ];

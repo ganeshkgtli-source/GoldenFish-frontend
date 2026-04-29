@@ -338,3 +338,13 @@
   font-size: 11px;
   opacity: 0.6;
 }
+
+/* 🌙 Dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* ☀️ Light mode */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+}

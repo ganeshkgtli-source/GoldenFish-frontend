@@ -14,6 +14,8 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminErrorsRouteImport } from './routes/admin/errors'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
 import { Route as ResetPasswordUidTokenRouteImport } from './routes/reset-password.$uid.$token'
@@ -43,6 +45,16 @@ const HomeRoute = HomeRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/admin/orders',
+  path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminErrorsRoute = AdminErrorsRouteImport.update({
+  id: '/admin/errors',
+  path: '/admin/errors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -79,6 +91,8 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/errors': typeof AdminErrorsRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/client/$id': typeof AdminClientIdRoute
   '/admin/super/dashboard': typeof AdminSuperDashboardRoute
   '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
@@ -91,6 +105,8 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/errors': typeof AdminErrorsRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/client/$id': typeof AdminClientIdRoute
   '/admin/super/dashboard': typeof AdminSuperDashboardRoute
   '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
@@ -104,6 +120,8 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/errors': typeof AdminErrorsRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/client/$id': typeof AdminClientIdRoute
   '/admin/super/dashboard': typeof AdminSuperDashboardRoute
   '/reset-password/$uid/$token': typeof ResetPasswordUidTokenRoute
@@ -118,6 +136,8 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/errors'
+    | '/admin/orders'
     | '/admin/client/$id'
     | '/admin/super/dashboard'
     | '/reset-password/$uid/$token'
@@ -130,6 +150,8 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/errors'
+    | '/admin/orders'
     | '/admin/client/$id'
     | '/admin/super/dashboard'
     | '/reset-password/$uid/$token'
@@ -142,6 +164,8 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/clients'
     | '/admin/dashboard'
+    | '/admin/errors'
+    | '/admin/orders'
     | '/admin/client/$id'
     | '/admin/super/dashboard'
     | '/reset-password/$uid/$token'
@@ -155,6 +179,8 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   AdminClientsRoute: typeof AdminClientsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminErrorsRoute: typeof AdminErrorsRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
   AdminClientIdRoute: typeof AdminClientIdRoute
   AdminSuperDashboardRoute: typeof AdminSuperDashboardRoute
   ResetPasswordUidTokenRoute: typeof ResetPasswordUidTokenRoute
@@ -195,6 +221,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/admin/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/errors': {
+      id: '/admin/errors'
+      path: '/admin/errors'
+      fullPath: '/admin/errors'
+      preLoaderRoute: typeof AdminErrorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -243,6 +283,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   AdminClientsRoute: AdminClientsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminErrorsRoute: AdminErrorsRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
   AdminClientIdRoute: AdminClientIdRoute,
   AdminSuperDashboardRoute: AdminSuperDashboardRoute,
   ResetPasswordUidTokenRoute: ResetPasswordUidTokenRoute,

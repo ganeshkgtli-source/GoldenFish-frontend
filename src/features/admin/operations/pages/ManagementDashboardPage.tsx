@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import api from "@/lib/api";
+import { userService } from "@/lib/auth";
 // import { useTheme } from "@/context/ThemeContext";
 // import api from "@/lib/api"; connect to bckend to fetch real stats and logs
 
@@ -17,6 +18,15 @@ export default function ManagementDashboardPage() {
 //   sub: string;
 //   danger?: boolean;
 // };
+const [username, setUsername] = useState<string | null>(null);
+useEffect(() => {
+  setUsername(userService.get());
+
+  const sync = () => setUsername(userService.get());
+
+  window.addEventListener("storage", sync);
+  return () => window.removeEventListener("storage", sync);
+}, []);
 type Trade = {
   client: string;
   symbol: string;
@@ -214,8 +224,7 @@ setErrorLogs((prev) => [newError, ...prev].slice(0, limit));
 
             <div>
               <h2 className="text-lg font-semibold">
-                Welcome back, Admin!
-              </h2>
+Welcome back {username ? username.charAt(0).toUpperCase() + username.slice(1) +"👋" : "Admin👋"}</h2>       
               <p className="text-sm text-muted-foreground mt-1">
                 Here's what's happening with your clients, orders and system.
               </p>
@@ -419,6 +428,9 @@ function TradeRow({ client, symbol, type, qty, price }: any) {
       </div>
 
       <div />
+      <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border mt-auto">
+        © 2026 GoldenFish • Management Panel
+      </footer>
     </div>
   );
 }
