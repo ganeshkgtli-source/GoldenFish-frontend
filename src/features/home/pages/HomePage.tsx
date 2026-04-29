@@ -12,8 +12,7 @@ export default function HomePage() {
   const [username, setUsername] = useState<string | null>(null);
   // ✅ use logout hook
   const logoutMutation = useLogout();
-  const profileMutation = useProfile();
-
+const { data: profile, refetch, isLoading } = useProfile();
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync(); // ✅ backend logout
@@ -25,10 +24,9 @@ export default function HomePage() {
   };
 const handleProfileClick = async () => {
   try {
-  const res = await profileMutation.mutateAsync();
-
-    console.log("PROFILE:", res);
-
+    const res = await refetch();
+    console.log("PROFILE:", res.data);
+    console.log(profile,isLoading);
   } catch (err) {
     console.log("Failed to fetch profile");
   }

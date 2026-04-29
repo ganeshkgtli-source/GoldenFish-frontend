@@ -1,4 +1,4 @@
-import { Search, Calendar, RotateCcw } from "lucide-react";import { useState, useEffect } from "react";
+import { Search,  RotateCcw } from "lucide-react";import { useState, useEffect } from "react";
 
 type Props = {
   search: string;

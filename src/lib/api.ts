@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
-import { tokenService, sessionService } from "@/lib/auth";
+import { tokenService } from "@/lib/auth";
 
 /* ================= ENV ================= */
 
