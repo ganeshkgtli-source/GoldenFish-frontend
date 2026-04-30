@@ -10,15 +10,17 @@ import {
   Eye,
 } from "lucide-react";
 
-import { useLogin } from "../hooks/useAuth";
 import {
+  useLogin,
   useVerifyOtp,
   useResendOtp,
   useForgotPassword,
 } from "../hooks/useAuth";
 import ThemeToggle from "../components/ThemeToggle";
 import OtpVerification from "../components/OtpVerification";
-import { tokenService, roleService  ,userService } from "@/lib/auth";
+  
+import { useAuthStore } from "@/store/authStore";
+import { normalizeRole } from "@/lib/auth";
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -46,119 +48,206 @@ export default function LoginPage() {
   // ✅ COOLDOWN TIMER
   const [cooldown, setCooldown] = useState(0);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
- 
+ const setUser = useAuthStore((s) => s.setUser);
   /* ================= LOGIN ================= */
-
-const handleSubmit = async (e: any) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError("");
 
   try {
     const res = await loginMutation.mutateAsync(form);
 
-    /* ================= STORE AUTH ================= */
-
-    // ✅ remember me flag
-    localStorage.setItem("rememberMe", rememberMe ? "true" : "false");
-
-    // ✅ store tokens
-    tokenService.set(res.tokens.access, res.tokens.refresh);
-
-    /* ================= ROLE FIX ================= */
-
-    const roleMap: Record<string, "admin" | "super_admin" | "user"> = {
-      ADMIN: "admin",
-      SUPER_ADMIN: "super_admin",
-      USER: "user",
-    };
-
-    const role = roleMap[res.role];
-
-    if (role) {
-      roleService.set(role);
-    }
-
-    /* ================= USERNAME (🔥 THIS WAS MISSING) ================= */
-
-    if (res.username) {
-      userService.set(res.username); // ✅ FIX
-    }
-
-    /* ================= EXTERNAL REDIRECT ================= */
-
-    if (res.dhan_login_url) {
-      window.location.href = res.dhan_login_url;
-      return;
-    }
-
-    /* ================= BACKEND REDIRECT ================= */
-
-    if (res.redirect_to) {
-      navigate({ to: res.redirect_to });
-      return;
-    }
-
-    /* ================= FALLBACK ================= */
-
-    if (role === "super_admin") {
-      navigate({ to: "/super-admin/dashboard" });
-    } else if (role === "admin") {
-      navigate({ to: "/admin/dashboard" });
-    } else {
-      navigate({ to: "/home" });
-    }
-
-  } catch (err: any) {
-    const data = err?.response?.data;
-
-    // ✅ EMAIL NOT VERIFIED → SHOW OTP
-    if (data?.email_verification_required) {
-      setEmail(data.email);
+    // 🔥 1. OTP FLOW (must be first)
+    if (res?.email_verification_required) {
+      setEmail(res.email || form.identifier);
       setShowOtp(true);
       setError("");
       return;
     }
 
+    // 🔥 2. SAFETY CHECK (tokens must exist)
+    if (!res?.tokens?.access || !res?.tokens?.refresh) {
+      setError("Login failed. Please try again.");
+      return;
+    }
+
+    // 🔥 3. REMEMBER ME
+    localStorage.setItem("rememberMe", rememberMe ? "true" : "false");
+
+    // ❌ DO NOT SET TOKENS HERE
+    // tokenService.set(...) → already handled in useLogin
+
+    // 🔥 4. ROLE NORMALIZATION
+
+     
+    const role = res.role?.trim().toLowerCase() ?? "user";
+
+console.log("ROLE RAW:", res.role);
+console.log("ROLE NORMALIZED:", role);
+
+setUser({
+  username: res.username ?? "",
+role: normalizeRole( role),});
+if (res.dhan_login_url) {
+  window.location.href = res.dhan_login_url;
+  return;
+}
+
+if (role === "super_admin") {
+  navigate({ to: "/super-admin/dashboard", replace: true });
+  return;
+} else if (role === "admin") {
+  navigate({ to: "/admin/dashboard", replace: true });
+  return;
+}
+
+if (res.redirect_to) {
+  navigate({ to: res.redirect_to, replace: true });
+  return;
+}
+
+navigate({ to: "/home", replace: true });
+  } catch (err: unknown) {
+    const data = (err as any)?.response?.data ?? {};
+
     setError(
       data?.message ||
       data?.error ||
       data?.detail ||
-      err?.message ||
+      (err as Error)?.message ||
       "Invalid credentials"
     );
   }
 };
-  /* ================= VERIFY OTP ================= */
-  const handleVerifyOtp = async (otp: string) => {
-    if (!email) {
-      throw new Error("Email missing. Please login again.");
-    }
+// const handleSubmit = async (e: any) => {
+//   e.preventDefault();
+//   setError("");
 
-    await verifyMutation.mutateAsync({
+//   try {
+//     const res = await loginMutation.mutateAsync(form);
+
+//     /* ================= STORE AUTH ================= */
+
+//     // ✅ remember me flag
+//     localStorage.setItem("rememberMe", rememberMe ? "true" : "false");
+
+//     // ✅ store tokens
+//     tokenService.set(res.tokens.access, res.tokens.refresh);
+
+//     /* ================= ROLE FIX ================= */
+
+//     // const roleMap: Record<string, "admin" | "super_admin" | "user"> = {
+//     //   ADMIN: "admin",
+//     //   SUPER_ADMIN: "super_admin",
+//     //   USER: "user",
+//     // };
+
+//     // const role = roleMap[res.role];
+
+//     // if (role) {
+//     //   roleService.set(role);
+//     // }
+
+//     /* ================= USERNAME (🔥 THIS WAS MISSING) ================= */
+
+//     // if (res.username) {
+//     //   userService.set(res.username); // ✅ FIX
+//     // }
+
+//     /* ================= EXTERNAL REDIRECT ================= */
+
+//     if (res.dhan_login_url) {
+//       window.location.href = res.dhan_login_url;
+//       return;
+//     }
+
+//     /* ================= BACKEND REDIRECT ================= */
+
+//     if (res.redirect_to) {
+//       navigate({ to: res.redirect_to });
+//       return;
+//     }
+
+//     /* ================= FALLBACK ================= */
+
+//     if (role === "super_admin") {
+//       navigate({ to: "/super-admin/dashboard" });
+//     } else if (role === "admin") {
+//       navigate({ to: "/admin/dashboard" });
+//     } else {
+//       navigate({ to: "/home" });
+//     }
+
+//   } catch (err: any) {
+//     const data = err?.response?.data;
+
+//     // ✅ EMAIL NOT VERIFIED → SHOW OTP
+//     if (data?.email_verification_required) {
+//       setEmail(data.email);
+//       setShowOtp(true);
+//       setError("");
+//       return;
+//     }
+
+//     setError(
+//       data?.message ||
+//       data?.error ||
+//       data?.detail ||
+//       err?.message ||
+//       "Invalid credentials"
+//     );
+//   }
+// };
+  /* ================= VERIFY OTP ================= */
+ const handleVerifyOtp = async (otp: string) => {
+  if (!email) {
+    return {
+      success: false,
+      message: "Email missing. Please login again.",
+    };
+  }
+
+  try {
+    const res = await verifyMutation.mutateAsync({
       email,
       otp,
     });
 
-    // ✅ ONLY VERIFY → NOT LOGIN
+    // 🚨 IMPORTANT: normalize response for OTP component
+    if (res?.status === "error") {
+      return {
+        success: false,
+        message: res.message || "Invalid OTP",
+      };
+    }
+
+    // ✅ success
     setShowOtp(false);
 
-    // ✅ Prefill login field
     setForm((prev) => ({
       ...prev,
       identifier: email,
     }));
 
     setError("Email verified successfully. Please login.");
-  };
 
+    return { success: true };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: (err as Error).message || "Invalid OTP",
+    };
+  }
+};
   /* ================= RESEND OTP ================= */
 const handleResend = async () => {
   try {
     const res = await resendMutation.mutateAsync(email);
     return res;
-  } catch (err) {
-    throw err; // ✅ let OtpVerification handle block/cooldown
-  }
+  }catch (err) {
+  return Promise.reject(err);
+}
 };
 
   const handleForgotPassword = async () => {

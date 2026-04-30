@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   TrendingUp,
   User,
@@ -10,18 +10,57 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import api from "@/lib/api";
+// import api from "@/lib/api";
 import OtpVerification from "./OtpVerification";
 interface Props {
-  onSubmit: (data: any) => Promise<void>;
-  onVerifyOtp?: (otp: string) => Promise<void>;
-  onResend?: () => Promise<void>;
+  onSubmit: (data: RegisterPayload) => Promise<any>;
+  onVerifyOtp: (otp: string) => Promise<any>;
+  onResend?: () => Promise<any>;
   loading: boolean;
   initialEmail?: string;
-  externalError?: string;
 }
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import { useCheckUserExists } from "../hooks/useAuth";
+
+type RegisterPayload = {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  client_id: string;
+  api_key?: string;
+  api_secret?: string;
+  account_type: "AP" | "INDIVIDUAL";
+};
+
+type FormState = {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirm_password: string;
+  client_id: string;
+  api_key: string;
+  api_secret: string;
+  terms_accepted: boolean;
+  account_type: "AP" | "INDIVIDUAL" | null; // ✅ ADD THIS
+};
+type ApiError = {
+  message?: string;
+  error?: string;
+};
+
+const parseError = (err: unknown): string => {
+  const e = err as { response?: { data?: ApiError } };
+
+  return (
+    e?.response?.data?.message ||
+    e?.response?.data?.error ||
+    (err as Error)?.message ||
+    "Something went wrong"
+  );
+};
 
 export default function RegisterWizard({
   onSubmit,
@@ -31,10 +70,14 @@ export default function RegisterWizard({
   onResend,
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
-
-  const [form, setForm] = useState({
+const checkUserMutation = useCheckUserExists();
+const [form, setForm] = useState<FormState>({
     username: "",
-    email: initialEmail,
+    // email: initialEmail,
+    email:
+  initialEmail ||
+  sessionStorage.getItem("verify_email") ||
+  "",
     phone: "",
     password: "",
     confirm_password: "",
@@ -49,15 +92,28 @@ export default function RegisterWizard({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [hasDhanAccount, setHasDhanAccount] = useState<boolean | null>(null);
-  const [accountType, setAccountType] = useState<"AP" | "INDIVIDUAL" | null>(
-    null,
-  );
+  // const [accountType, setAccountType] = useState<"AP" | "INDIVIDUAL" | null>(
+  //   null,
+  // );
   const [submitting, setSubmitting] = useState(false);
   const steps = [
     { number: 1, title: "Personal Info", icon: User },
     { number: 2, title: "Security", icon: Lock },
     { number: 3, title: "API Setup", icon: Key },
   ];
+useEffect(() => {
+  const savedEmail = sessionStorage.getItem("verify_email");
+
+  if (savedEmail) {
+    setShowOtp(true);
+
+    // also sync email into form (important)
+    setForm((prev) => ({
+      ...prev,
+      email: savedEmail,
+    }));
+  }
+}, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -144,7 +200,7 @@ export default function RegisterWizard({
       }
 
       // ✅ ONLY for INDIVIDUAL
-      if (accountType === "INDIVIDUAL") {
+      if (form.account_type === "INDIVIDUAL") {
         if (!form.api_key || !form.api_secret) {
           setError("Please fill in all API credentials");
           return false;
@@ -160,140 +216,231 @@ export default function RegisterWizard({
     return true;
   };
 
-  const checkUserExists = async (
-    username: string,
-    email: string,
-    phone: string,
-  ) => {
-    const res = await api.post("/check-user-exists/", {
-      username,
-      email,
-      phone: phone.replace(/^\+91/, ""),
-    });
+   
+const handleNext = async () => {
+  if (loading) return;
 
-    return res.data;
-  };
+  setError("");
 
-  const handleNext = async () => {
-    if (loading) return;
-    if (!validateStep()) return;
+  if (!validateStep()) return;
 
-    // 🔹 STEP 1 → check user exists
-    if (currentStep === 1) {
-      try {
-        if (!form.phone) {
-          setError("Phone number is required");
-          return;
-        }
-        const res = await checkUserExists(
-          form.username,
-          form.email,
-          form.phone,
-        );
+  if (currentStep === 1) {
+    try {
+      const res = await checkUserMutation.mutateAsync({
+        username: form.username,
+        email: form.email,
+        phone: form.phone.replace(/^\+91/, ""),
+      });
 
-        if (res.exists) {
-          setError(res.message);
-          return;
-        }
-      } catch (error) {
-        console.log(error);
-        setError("Failed to validate user details");
+      if (res.exists) {
+        setError(res.message || "User already exists");
         return;
       }
+
+      setCurrentStep(2);
+    } catch (err) {
+      setError(parseError(err));
     }
+    return;
+  }
 
-    // 🔹 STEP 2 → dhan + account type logic
-    if (currentStep === 2) {
-      if (hasDhanAccount === null) {
-        setError("Please select an option to continue");
-        return;
-      }
-      if (hasDhanAccount === true) {
-        if (!accountType) {
-          setError("Please select account type");
-          return;
-        }
-
-        setCurrentStep(3);
-      } else {
-        window.open("https://dhan.co/", "_blank");
-        setError("Please create a Dhan account and come back to continue.");
-      }
-
-      return;
-
+  if (currentStep === 2) {
+    if (hasDhanAccount === null) {
+      setError("Please select an option");
       return;
     }
 
-    // 🔹 DEFAULT FLOW
-    if (currentStep < 3) {
-      setCurrentStep((prev) => prev + 1);
+    if (!hasDhanAccount) {
+      window.open("https://dhan.co/", "_blank");
+      setError("Create Dhan account first");
+      return;
     }
-  };
+
+ if (!form.account_type) {
+  setError("Select account type");
+  return;
+}
+
+    setCurrentStep(3);
+    return;
+  }
+
+  if (currentStep < 3) {
+    setCurrentStep((prev) => prev + 1);
+  }
+};
+  // const handleNext = async () => {
+  //   if (loading) return;
+  //   if (!validateStep()) return;
+
+  //   // 🔹 STEP 1 → check user exists
+  //   if (currentStep === 1) {
+  //     try {
+  //       if (!form.phone) {
+  //         setError("Phone number is required");
+  //         return;
+  //       }
+  //       const res = await checkUserExists(
+  //         form.username,
+  //         form.email,
+  //         form.phone,
+  //       );
+
+  //       if (res.exists) {
+  //         setError(res.message);
+  //         return;
+  //       }
+  //     } catch (error) {
+  //       console.log(error);
+  //       setError("Failed to validate user details");
+  //       return;
+  //     }
+  //   }
+
+  //   // 🔹 STEP 2 → dhan + account type logic
+  //   if (currentStep === 2) {
+  //     if (hasDhanAccount === null) {
+  //       setError("Please select an option to continue");
+  //       return;
+  //     }
+  //     if (hasDhanAccount === true) {
+  //       if (!accountType) {
+  //         setError("Please select account type");
+  //         return;
+  //       }
+
+  //       setCurrentStep(3);
+  //     } else {
+  //       window.open("https://dhan.co/", "_blank");
+  //       setError("Please create a Dhan account and come back to continue.");
+  //     }
+
+  //     return;
+
+  //     return;
+  //   }
+
+  //   // 🔹 DEFAULT FLOW
+  //   if (currentStep < 3) {
+  //     setCurrentStep((prev) => prev + 1);
+  //   }
+  // };
+ 
+ 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
       setError("");
     }
   };
+const handleSubmit = async () => {
+  if (loading || submitting) return;
 
-  const handleSubmit = async () => {
-    if (loading || submitting) return;
+  setError("");
+  setSuccess("");
 
-    if (!validateStep()) return;
-    setSubmitting(true);
+  if (!validateStep()) return;
 
-    if (!accountType) {
-      setError("Please select account type");
-      return;
-    }
+  if (!form.account_type) {
+    setError("Please select account type");
+    return;
+  }
 
-    try {
-      setError("");
-      setSuccess("");
+  setSubmitting(true);
 
-      const { confirm_password, ...payload } = {
-        ...form,
-        username: form.username.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-      };
+  try {
+    const { confirm_password, ...payload } = {
+      ...form,
+      username: form.username.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+    };
 
-      const cleanedPayload =
-        accountType === "AP"
-          ? {
-              ...payload,
-              api_key: "",
-              api_secret: "",
-            }
-          : payload;
-      // console.log("Submitting registration with payload:", cleanedPayload);
-      await onSubmit({
-        ...cleanedPayload,
-        phone: payload.phone.replace(/^\+91/, ""),
-        account_type: accountType,
-      });
+    const cleanedPayload =
+      form.account_type === "AP"
+        ? { ...payload, api_key: "", api_secret: "" }
+        : payload;
 
-      setShowOtp(true);
-      // setSuccess("OTP sent to your email 📩");
-    } catch (err: any) {
-      console.log("❌ REGISTER ERROR:", err?.response?.data);
+    const res = await onSubmit({
+      ...cleanedPayload,
+      phone: payload.phone.replace(/^\+91/, ""),
+      account_type: form.account_type,
+    });
 
-      // setError(
-      //   err?.response?.data?.message ||
-      //     err?.response?.data?.detail ||
-      //     "Registration failed",
-      // );
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          err?.message ||
-          "Registration failed",
-      );
-    } finally {
-      setSubmitting(false); // ✅ ALWAYS reset
-    }
-  };
+if (res?.success !== false) {
+  sessionStorage.setItem(
+    "verify_email",
+    form.email.trim().toLowerCase()
+  );
+
+  setShowOtp(true);
+} else {
+  setError(res?.message || "Registration failed");
+}
+
+  } catch (err) {
+    setError(parseError(err));
+  } finally {
+    setSubmitting(false);
+  }
+};
+  // const handleSubmit = async () => {
+  //   if (loading || submitting) return;
+
+  //   if (!validateStep()) return;
+  //   setSubmitting(true);
+
+  //   if (!accountType) {
+  //     setError("Please select account type");
+  //     return;
+  //   }
+
+  //   try {
+  //     setError("");
+  //     setSuccess("");
+
+  //     const { confirm_password, ...payload } = {
+  //       ...form,
+  //       username: form.username.trim(),
+  //       email: form.email.trim(),
+  //       phone: form.phone.trim(),
+  //     };
+
+  //     const cleanedPayload =
+  //       accountType === "AP"
+  //         ? {
+  //             ...payload,
+  //             api_key: "",
+  //             api_secret: "",
+  //           }
+  //         : payload;
+  //     // console.log("Submitting registration with payload:", cleanedPayload);
+  //     await onSubmit({
+  //       ...cleanedPayload,
+  //       phone: payload.phone.replace(/^\+91/, ""),
+  //       account_type: accountType,
+  //     });
+
+  //     setShowOtp(true);
+  //     // setSuccess("OTP sent to your email 📩");
+  //   } catch (err: any) {
+  //     console.log("❌ REGISTER ERROR:", err?.response?.data);
+
+  //     // setError(
+  //     //   err?.response?.data?.message ||
+  //     //     err?.response?.data?.detail ||
+  //     //     "Registration failed",
+  //     // );
+  //     setError(
+  //       err?.response?.data?.message ||
+  //         err?.response?.data?.error ||
+  //         err?.message ||
+  //         "Registration failed",
+  //     );
+  //   } finally {
+  //     setSubmitting(false); // ✅ ALWAYS reset
+  //   }
+  // };
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
       <div className="w-full max-w-3xl">
@@ -539,198 +686,217 @@ export default function RegisterWizard({
                     )}
 
                     {/* Dhan Account Selection (Clean Card UI - No Checkbox) */}
-                    <div className="mt-6">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Do you have a Dhan trading account?
-                      </p>
+                 <div className="mt-6">
+  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+    Do you have a Dhan trading account?
+  </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* YES CARD */}
-                        <div
-                          onClick={() => {
-                            setHasDhanAccount(true);
-                            setAccountType(null); // reset
-                          }}
-                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
-      ${
-        hasDhanAccount === true
-          ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
-          : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
-      }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="text-sm font-semibold text-green-400">
-                                Yes, I have one
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Continue with API setup
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    
+    {/* YES CARD */}
+    <div
+      onClick={() => {
+        setHasDhanAccount(true);
 
-                        {/* NO CARD */}
-                        <div
-                          onClick={() => {
-                            setHasDhanAccount(false);
-                            setAccountType(null);
-                          }}
-                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
-      ${
-        hasDhanAccount === false
-          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
-          : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
-      }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="text-sm font-semibold text-blue-400">
-                                No, create account
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Redirect to Dhan signup
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 🔥 ADD THIS BLOCK BELOW */}
-                    {hasDhanAccount === true && (
-                      <div className="mt-6">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                          Select Account Type
-                        </p>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* INDIVIDUAL */}
-                          <div
-                            onClick={() => setAccountType("INDIVIDUAL")}
-                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+        // ✅ DO NOT set account_type here
+        setForm((prev) => ({
+          ...prev,
+          account_type: null,
+        }));
+      }}
+      className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
         ${
-          accountType === "INDIVIDUAL"
+          hasDhanAccount === true
             ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
             : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
         }`}
-                          >
-                            <div className="text-sm font-semibold text-green-400">
-                              INDIVIDUAL Account
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Full API setup required
-                            </p>
-                          </div>
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-sm font-semibold text-green-400">
+            Yes, I have one
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Continue with API setup
+          </p>
+        </div>
+      </div>
+    </div>
 
-                          {/* API */}
-                          <div
-                            onClick={() => {
-                              setAccountType("AP");
+    {/* NO CARD */}
+    <div
+      onClick={() => {
+        setHasDhanAccount(false);
 
-                              setForm((prev) => ({
-                                ...prev,
-                                api_key: "",
-                                api_secret: "",
-                              }));
-                            }}
-                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+        // ✅ also reset here
+        setForm((prev) => ({
+          ...prev,
+          account_type: null,
+        }));
+      }}
+      className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
         ${
-          accountType === "AP"
+          hasDhanAccount === false
             ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
             : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
         }`}
-                          >
-                            <div className="text-sm font-semibold text-blue-400">
-                              API Account
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Only Client ID required
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-sm font-semibold text-blue-400">
+            No, create account
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Redirect to Dhan signup
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+                    {/* 🔥 ADD THIS BLOCK BELOW */}
+                    {hasDhanAccount === true && (
+  <div className="mt-6">
+    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+      Select Account Type
+    </p>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+      {/* INDIVIDUAL */}
+      <div
+        onClick={() =>
+          setForm((prev) => ({
+            ...prev,
+            account_type: "INDIVIDUAL",
+          }))
+        }
+        className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+          ${
+            form.account_type === "INDIVIDUAL"
+              ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
+              : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
+          }`}
+      >
+        <div className="text-sm font-semibold text-green-400">
+          INDIVIDUAL Account
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Full API setup required
+        </p>
+      </div>
+
+      {/* API */}
+      <div
+        onClick={() =>
+          setForm((prev) => ({
+            ...prev,
+            account_type: "AP",
+            api_key: "",
+            api_secret: "",
+          }))
+        }
+        className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+          ${
+            form.account_type === "AP"
+              ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
+              : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
+          }`}
+      >
+        <div className="text-sm font-semibold text-blue-400">
+          API Account
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Only Client ID required
+        </p>
+      </div>
+
+    </div>
+  </div>
+)}
                   </div>
                 )}
 
                 {/* STEP 3 */}
                 {currentStep === 3 && (
-                  <div className="space-y-5">
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        {accountType === "AP"
-                          ? "Client ID Setup"
-                          : "API Configuration"}
-                      </h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Connect your Dhan trading account
-                      </p>
-                    </div>
+  <div className="space-y-5">
+    <div className="mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        {form.account_type === "AP"
+          ? "Client ID Setup"
+          : "API Configuration"}
+      </h2>
 
-                    {/* ALWAYS SHOW */}
-                    <Field
-                      label="Client ID"
-                      name="client_id"
-                      placeholder="Enter your Dhan Client ID"
-                      value={form.client_id}
-                      onChange={handleChange}
-                    />
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Connect your Dhan trading account
+      </p>
+    </div>
 
-                    {/* ONLY FOR INDIVIDUAL ACCOUNT */}
-                    {accountType === "INDIVIDUAL" && (
-                      <>
-                        <Field
-                          label="API Key"
-                          name="api_key"
-                          placeholder="Enter your API Key"
-                          value={form.api_key}
-                          onChange={handleChange}
-                        />
+    {/* ALWAYS SHOW */}
+    <Field
+      label="Client ID"
+      name="client_id"
+      placeholder="Enter your Dhan Client ID"
+      value={form.client_id}
+      onChange={handleChange}
+    />
 
-                        <Field
-                          label="API Secret"
-                          name="api_secret"
-                          type="password"
-                          placeholder="Enter your API Secret"
-                          value={form.api_secret}
-                          onChange={handleChange}
-                        />
-                      </>
-                    )}
+    {/* ONLY FOR INDIVIDUAL ACCOUNT */}
+    {form.account_type === "INDIVIDUAL" && (
+      <>
+        <Field
+          label="API Key"
+          name="api_key"
+          placeholder="Enter your API Key"
+          value={form.api_key}
+          onChange={handleChange}
+        />
 
-                    <label className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        name="terms_accepted"
-                        checked={form.terms_accepted}
-                        onChange={handleChange}
-                        className="mt-1"
-                      />
+        <Field
+          label="API Secret"
+          name="api_secret"
+          type="password"
+          placeholder="Enter your API Secret"
+          value={form.api_secret}
+          onChange={handleChange}
+        />
+      </>
+    )}
 
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        I agree to the{" "}
-                        <a
-                          href="/terms-and-conditions"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-red-600 hover:text-red-700 font-medium underline"
-                        >
-                          Terms & Conditions
-                        </a>{" "}
-                        and{" "}
-                        <a
-                          href="/privacy-policy"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-red-600 hover:text-red-700 font-medium underline"
-                        >
-                          Privacy Policy
-                        </a>
-                      </span>
-                    </label>
-                  </div>
-                )}
+    <label className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        name="terms_accepted"
+        checked={form.terms_accepted}
+        onChange={handleChange}
+        className="mt-1"
+      />
+
+      <span className="text-sm text-gray-600 dark:text-gray-400">
+        I agree to the{" "}
+        <a
+          href="/terms-and-conditions"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-red-600 hover:text-red-700 font-medium underline"
+        >
+          Terms & Conditions
+        </a>{" "}
+        and{" "}
+        <a
+          href="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-red-600 hover:text-red-700 font-medium underline"
+        >
+          Privacy Policy
+        </a>
+      </span>
+    </label>
+  </div>
+)}
               </div>
               <div
                 className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t 
@@ -804,38 +970,57 @@ flex items-center justify-between gap-3"
             </>
           ) : (
             <OtpVerification
-              email={form.email}
+email={form.email.trim().toLowerCase()}
               loading={loading}
               onVerify={async (otp: string) => {
                 setError("");
                 setSuccess("");
 
-                if (onVerifyOtp) {
-                  await onVerifyOtp(otp);
-                }
+//                 if (!onVerifyOtp) {
+//   throw new Error("OTP handler not provided");
+// }
+
+
+await onVerifyOtp(otp);
               }}
+              // onResend={async () => {
+              //   try {
+              //     setError("");
+              //     setSuccess("");
+
+              //     if (!onResend) {
+              //       return { message: "No handler" }; // ✅ never return null
+              //     }
+
+              //     const res = await onResend();
+
+              //     return res ?? { message: "OTP sent" }; // ✅ fallback object
+              //   } catch (err: any) {
+              //     setError(
+              //       err?.response?.data?.message ||
+              //         err?.response?.data?.detail ||
+              //         "Failed to resend OTP",
+              //     );
+
+              //     throw err; // ✅ keep error flow
+              //   }
+              // }}
               onResend={async () => {
-                try {
-                  setError("");
-                  setSuccess("");
+  try {
+    setError("");
 
-                  if (!onResend) {
-                    return { message: "No handler" }; // ✅ never return null
-                  }
+    if (!onResend) return { message: "No handler" };
 
-                  const res = await onResend();
+    const res = await onResend();
 
-                  return res ?? { message: "OTP sent" }; // ✅ fallback object
-                } catch (err: any) {
-                  setError(
-                    err?.response?.data?.message ||
-                      err?.response?.data?.detail ||
-                      "Failed to resend OTP",
-                  );
+    return res ?? { message: "OTP sent" };
+  }catch (err) {
+  const message = parseError(err);
+  setError(message);
 
-                  throw err; // ✅ keep error flow
-                }
-              }}
+  return { success: false, message };
+}
+}}
               title="Verify your email"
               subtitle="Enter the 6-digit OTP sent to your email"
             />
@@ -857,7 +1042,19 @@ flex items-center justify-between gap-3"
   );
 }
 
-function Field({ label, type, enableToggle = false, ...props }: any) {
+ 
+
+type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  enableToggle?: boolean;
+};
+
+function Field({
+  label,
+  type = "text",
+  enableToggle = false,
+  ...props
+}: FieldProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -872,10 +1069,16 @@ function Field({ label, type, enableToggle = false, ...props }: any) {
       <div className="relative">
         <input
           {...props}
-          value={props.value || ""} // ✅ IMPORTANT FIX
+          value={props.value ?? ""} // ✅ safe fallback
           type={isPassword && showPassword ? "text" : type}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={(e) => {
+            setIsFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            props.onBlur?.(e);
+          }}
           className={`w-full px-4 h-[52px] leading-none ${
             enableToggle ? "pr-12 hide-browser-eye" : ""
           } bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-500`}
@@ -884,15 +1087,13 @@ function Field({ label, type, enableToggle = false, ...props }: any) {
         {isPassword && enableToggle && (
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()} // ✅ FIX
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => setShowPassword((prev) => !prev)}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-200
-    ${
-      props.value && (isFocused || showPassword)
-        ? "opacity-100"
-        : "opacity-0 pointer-events-none"
-    }
-    text-slate-500 dark:text-slate-200 hover:text-red-500`}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-200 ${
+              Boolean(props.value) && (isFocused || showPassword)
+                ? "opacity-100"
+                : "opacity-0 pointer-events-none"
+            } text-slate-500 dark:text-slate-200 hover:text-red-500`}
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -901,3 +1102,5 @@ function Field({ label, type, enableToggle = false, ...props }: any) {
     </div>
   );
 }
+
+// export default Field;

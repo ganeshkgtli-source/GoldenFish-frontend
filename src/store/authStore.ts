@@ -1,11 +1,41 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { Role } from "@/lib/auth";
+
+type User = {
+  username: string;
+  email?: string;
+  role?: Role;
+};
 
 interface AuthState {
-  user: any;
-  setUser: (user: any) => void;
+  user: User | null;
+  isAuthenticated: boolean;
+
+  setUser: (user: User) => void;
+  clearUser: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+
+      setUser: (user) =>
+        set({
+          user,
+          isAuthenticated: true,
+        }),
+
+      clearUser: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+        }),
+    }),
+    {
+      name: "auth-storage", // localStorage key
+    }
+  )
+);

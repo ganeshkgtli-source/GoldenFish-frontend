@@ -4,9 +4,8 @@ import { Mail } from "lucide-react";
 interface Props {
   email: string;
   loading: boolean;
-  onVerify: (otp: string) => Promise<void>;
-  onResend?: () => Promise<{ message?: string }>;
-  title?: string;
+  onVerify: (otp: string) => Promise<any>;
+onResend?: () => Promise<{ success?: boolean; message?: string }>;  title?: string;
   subtitle?: string;
 }
 
@@ -116,42 +115,53 @@ export default function OtpVerification({
   };
 
   /* ================= VERIFY ================= */
-  const handleVerify = async (code: string) => {
-    if (blocked || loading) return;
+const handleVerify = async (code: string) => {
+  if (blocked || loading) return;
 
-    if (code.length !== 6) {
-      setError("Please enter valid 6-digit OTP");
+  if (code.length !== 6) {
+    setError("Please enter valid 6-digit OTP");
+    triggerShake();
+    return;
+  }
+
+  try {
+    const res = await onVerify(code);
+
+    // 🚨 FORCE FAIL SAFE CHECK
+    if (!res || res.success === false || res.status === "error") {
+      setError(res?.message || "Invalid OTP");
+      setSuccess(""); // ✅ CLEAR SUCCESS
       triggerShake();
       return;
     }
 
-    try {
-      const res = await onVerify(code);
-      console.log("Verify response:", res);
+    // ✅ SUCCESS ONLY IF VALID RESPONSE
+    setError("");
+    setSuccess("Verified successfully");
+    setOtp(["", "", "", "", "", ""]);
 
-      setSuccess("Verified successfully");
-      setOtp(["", "", "", "", "", ""]);
-    } catch (err: any) {
-      const data = err?.response?.data;
+  } catch (err: unknown) {
+    const data = (err as any)?.response?.data;
 
-      triggerShake();
-      // setOtp(["", "", "", "", "", ""]);
-      inputsRef.current[5]?.focus();
+    setSuccess(""); // ✅ IMPORTANT
 
-      // 🔥 BACKEND BLOCK HANDLING
-      if (data?.blocked) {
-        setBlocked(true);
-        if (data.remaining_time) {
-          setTimer(data.remaining_time);
-        }
-        setError("Too many attempts. Try later.");
-        return;
+    triggerShake();
+    inputsRef.current[5]?.focus();
+
+    if (data?.blocked) {
+      setBlocked(true);
+
+      if (data?.remaining_time) {
+        setTimer(data.remaining_time);
       }
 
-      // 🔥 NORMAL ERROR
-      setError(data?.message || data?.error || "Invalid OTP");
+      setError("Too many attempts. Try later.");
+      return;
     }
-  };
+
+    setError(data?.message || data?.error || "Invalid OTP");
+  }
+};
 
   /* ================= AUTO VERIFY ================= */
   useEffect(() => {
@@ -177,80 +187,90 @@ export default function OtpVerification({
     };
   }, [otp, loading, blocked, success]);
 
+  useEffect(() => {
+  const savedEmail = sessionStorage.getItem("verify_email");
+
+  if (!email && !savedEmail) {
+    setError("Session expired. Please register again.");
+  }
+}, [email]);
   /* ================= RESEND ================= */
 
-  const handleResend = async () => {
-    if (resendLock.current) return;
-    resendLock.current = true;
+ const handleResend = async () => {
+  if (resendLock.current) return;
+  resendLock.current = true;
 
-    if (timer > 0) {
-      setError(`Please wait ${formatTime(timer)} before requesting again`);
-      resendLock.current = false;
+  if (timer > 0) {
+    setError(`Please wait ${formatTime(timer)} before requesting again`);
+    resendLock.current = false;
+    return;
+  }
+
+  setError("");
+  setSuccess("");
+  setOtp(["", "", "", "", "", ""]);
+  setBlocked(false);
+  lastSubmittedOtp.current = null;
+
+  let res;
+
+  try {
+    // ✅ SAFE CALL (no crash if parent throws)
+    res = await onResend?.();
+
+    // ✅ SUCCESS HANDLING
+    if (res?.success === false) {
+      setError(res?.message || "Failed to resend OTP");
       return;
     }
 
-    setError("");
-    setSuccess("");
-    setOtp(["", "", "", "", "", ""]);
-    setBlocked(false);
-    lastSubmittedOtp.current = null;
+    setSuccess(res?.message ?? "OTP sent");
+    setTimer(30); // match backend cooldown
 
-    try {
-      const res = await onResend?.();
-      console.log("Resend response:", res || "No response returned");
+    setTimeout(() => inputsRef.current[0]?.focus(), 50);
+  } catch (err: unknown) {
+    const data = (err as any)?.response?.data;
 
-      // ✅ SUCCESS
-      if (res) {
-        setSuccess(res.message ?? "OTP sent");
-      } else {
-        setSuccess("OTP sent");
-      }
-      setTimer(30); // match backend cooldown (30s)
+    // =============================
+    // 🔥 BLOCK (5 MIN)
+    // =============================
+    if (data?.blocked) {
+      const seconds = Number(data?.remaining_time) || 300;
 
-      inputsRef.current[0]?.focus();
-    } catch (err: any) {
-      const data = err?.response?.data;
-
-      // =============================
-      // 🔥 BLOCK (5 MIN)
-      // =============================
-      if (data?.blocked) {
-        const seconds = Number(data?.remaining_time) || 300;
-
-        setBlocked(true);
-        setTimer(seconds);
-        setError(
-          `You're temporarily blocked. Try again after ${formatTime(seconds)}`,
-        );
-        return;
-      }
-
-      // =============================
-      // 🔥 COOLDOWN (30 SEC)
-      // =============================
-      if (
-        data?.message?.toLowerCase().includes("please wait") &&
-        /\d+/.test(data.message)
-      ) {
-        const seconds =
-          Number(data?.remaining_time) ||
-          parseInt(data?.message?.match(/\d+/)?.[0] || "30");
-
-        setTimer(seconds);
-        setError(`Wait ${formatTime(seconds)} before retry`);
-        return;
-      }
-
-      // =============================
-      // 🔥 NORMAL ERROR
-      // =============================
-      setError(data?.message || "Failed to resend OTP");
-    } finally {
-      setTimeout(() => {
-        resendLock.current = false;
-      }, 300);
+      setBlocked(true);
+      setTimer(seconds);
+      setError(
+        `You're temporarily blocked. Try again after ${formatTime(seconds)}`
+      );
+      return;
     }
-  };
+
+    // =============================
+    // 🔥 COOLDOWN (30 SEC)
+    // =============================
+    if (
+      data?.message?.toLowerCase().includes("please wait") &&
+      /\d+/.test(data?.message || "")
+    ) {
+      const seconds =
+        Number(data?.remaining_time) ||
+        parseInt(data?.message?.match(/\d+/)?.[0] || "30");
+
+      setTimer(seconds);
+      setError(`Wait ${formatTime(seconds)} before retry`);
+      return;
+    }
+
+    // =============================
+    // 🔥 NORMAL ERROR
+    // =============================
+    setError(data?.message || "Failed to resend OTP");
+  } finally {
+    setTimeout(() => {
+      resendLock.current = false;
+    }, 300);
+  }
+};
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl p-8 text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-600/10 flex items-center justify-center mx-auto mb-6">
@@ -264,8 +284,9 @@ export default function OtpVerification({
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         {subtitle || "Enter the 6-digit OTP sent to"}
         <span className="block text-gray-900 dark:text-white font-medium mt-1">
-          {email.toLowerCase()}
-        </span>
+{(email || sessionStorage.getItem("verify_email") || "").toLowerCase()}      
+
+  </span>
       </p>
 
       {(error || success) && (
@@ -278,7 +299,7 @@ export default function OtpVerification({
       )}
 
       <div
-        className={`flex justify-center gap-3 mb-4 ${shake ? "animate-shake" : ""}`}
+        className={`flex justify-center gap-2 mb-4 ${shake ? "animate-shake" : ""}`}
       >
         {otp.map((digit, index) => (
           <input

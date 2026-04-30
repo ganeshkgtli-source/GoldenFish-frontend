@@ -4,12 +4,13 @@ import ThemeToggle from "../../auth/components/ThemeToggle";
 import { useLogout } from "@/features/auth/hooks/useAuth";
 import { useProfile } from "@/features/auth/hooks/useAuth";
 
-import { useState, useEffect } from "react";
-import { userService } from "@/lib/auth";
+// import {  } from "react";
+import { useAuthStore } from "@/store/authStore";
+// import { userService } from "@/lib/auth";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState<string | null>(null);
+  // const [username, setUsername] = useState<string | null>(null);
   // ✅ use logout hook
   const logoutMutation = useLogout();
 const { data: profile, refetch, isLoading } = useProfile();
@@ -22,6 +23,8 @@ const { data: profile, refetch, isLoading } = useProfile();
 
     navigate({ to: "/login" });
   };
+
+const user = useAuthStore((s) => s.user);
 const handleProfileClick = async () => {
   try {
     const res = await refetch();
@@ -31,14 +34,14 @@ const handleProfileClick = async () => {
     console.log("Failed to fetch profile");
   }
 };
-useEffect(() => {
-  setUsername(userService.get());
+// useEffect(() => {
+//   setUsername(userService.get());
 
-  const sync = () => setUsername(userService.get());
+//   const sync = () => setUsername(userService.get());
 
-  window.addEventListener("storage", sync);
-  return () => window.removeEventListener("storage", sync);
-}, []);
+//   window.addEventListener("storage", sync);
+//   return () => window.removeEventListener("storage", sync);
+// }, []);
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#020B1F]">
 
@@ -66,7 +69,7 @@ useEffect(() => {
   className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
 >
   <User className="w-4 h-4" />
-{username ? username : "Profile"}</button>
+{user?.username ?? "Profile"}</button>
 
           <button
             onClick={handleLogout}
@@ -89,7 +92,9 @@ useEffect(() => {
           dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
         >
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
-Welcome back {username ? username.charAt(0).toUpperCase() + username.slice(1) : "👋"}</h2>
+Welcome back {user?.username 
+  ? user.username.charAt(0).toUpperCase() + user.username.slice(1)
+  : "👋"}</h2>
           <p className="text-slate-600 dark:text-slate-300 mt-2">
             Manage your trading activity and monitor performance.
           </p>

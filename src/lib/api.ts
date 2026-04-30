@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
-import { tokenService } from "@/lib/auth";
+import { isTokenValid, tokenService } from "@/lib/auth";
 
 /* ================= ENV ================= */
 
@@ -108,8 +108,12 @@ if (!refresh) throw new Error("No refresh token");
   scheduleRefresh(res.data.access);
 
   return true;
-} catch {
-  logout();
+}catch (err: any) {
+  // 🔥 ONLY logout if refresh token is invalid
+  if (err?.response?.status === 401) {
+    logout();
+  }
+
   return false;
 } finally {
   refreshPromise = null;
@@ -124,58 +128,65 @@ return refreshPromise;
 /* ================= INIT SESSION ================= */
 
 export const initApiAuth = async () => {
-const token = tokenService.getAccess();
-const refresh = tokenService.getRefresh();
-const rememberMe = localStorage.getItem("rememberMe");
+  const access = tokenService.getAccess();
+  const refresh = tokenService.getRefresh();
+  const rememberMe = localStorage.getItem("rememberMe");
 
-if (!token || !refresh) return false;
+  if (!refresh) return false;
 
-if (rememberMe === "false" && !sessionStorage.getItem("sessionAlive")) {
-logout();
-return false;
-}
+  // 🔥 if access token expired → try refresh
+  if (!access || !isTokenValid(access)) {
+    const success = await refreshAccessToken();
+    return success;
+  }
 
-sessionStorage.setItem("sessionAlive", "true");
+  if (rememberMe === "false" && !sessionStorage.getItem("sessionAlive")) {
+    logout();
+    return false;
+  }
 
-scheduleRefresh(token);
+  sessionStorage.setItem("sessionAlive", "true");
 
-return true;
+  scheduleRefresh(access);
+
+  return true;
 };
 
 /* ================= RESPONSE INTERCEPTOR ================= */
 
 api.interceptors.response.use(
-(res) => res,
-async (error) => {
-const req: any = error.config;
-if (!req) return Promise.reject(error);
+  (res) => res,
+  async (error) => {
+    const req: any = error.config;
+    if (!req) return Promise.reject(error);
 
- 
-const isPublic = PUBLIC_ROUTES.has(req.url);
-req._retryCount = req._retryCount || 0;
+    const isPublic = PUBLIC_ROUTES.has(req.url);
+    req._retryCount = req._retryCount || 0;
 
-if (
-  error.response?.status === 401 &&
-  !isPublic &&
-  req._retryCount < 1
-) {
-  req._retryCount++;
+    // 🔥 only handle 401 from protected routes
+    if (
+      error.response?.status === 401 &&
+      !isPublic &&
+      req._retryCount < 1
+    ) {
+      req._retryCount++;
 
-  const success = await refreshAccessToken();
+      const success = await refreshAccessToken();
 
-  if (success) {
-    req.headers.set(
-      "Authorization",
-      `Bearer ${tokenService.getAccess()}`
-    );
-    return api(req);
+      if (success) {
+        req.headers.set(
+          "Authorization",
+          `Bearer ${tokenService.getAccess()}`
+        );
+        return api(req);
+      }
+
+      // ❌ refresh failed → logout
+      logout();
+    }
+
+    return Promise.reject(error);
   }
-}
-
-return Promise.reject(error);
-                                                                                                       
-
-}
 );
 
 /* ================= CROSS TAB SYNC ================= */

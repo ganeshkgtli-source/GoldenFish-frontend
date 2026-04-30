@@ -1,7 +1,13 @@
 import api from "@/lib/api";
+import { tokenService } from "@/lib/auth";
 import axios from "axios";
 
 /* ================= TYPES ================= */
+
+export type Tokens = {
+  access: string;
+  refresh: string;
+};
 
 export type RegisterPayload = {
   email: string;
@@ -14,58 +20,55 @@ export type LoginPayload = {
   password: string;
 };
 
-export type AuthResponse = {
-  access: string;
-  refresh: string;
-  user?: {
-    id: string;
-    email: string;
-  };
-};
 export type LoginResponse = {
   message: string;
-username: string;
-  tokens: {
-    access: string;
-    refresh: string;
-  };
-
+  username: string;
+  tokens: Tokens;
   role: "ADMIN" | "SUPER_ADMIN" | "USER";
-
   redirect_to: string;
-
   dhan_login_url: string | null;
-
   email_verification_required?: boolean;
   email?: string;
 };
+
+export type VerifyOtpPayload = {
+  email: string;
+  otp: string;
+};
+
+export type ApiResponse = {
+  status?: string;
+  message?: string;
+  error?: string;
+};
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  username?: string;
+};
+
 /* ================= ERROR HANDLER ================= */
 
 type ApiError = {
   message?: string;
   error?: string;
   detail?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export const parseError = (err: unknown): string => {
-  // ✅ Axios error (backend response)
   if (axios.isAxiosError(err)) {
     const data = err.response?.data as ApiError | undefined;
 
     if (!data) return err.message || "Request failed";
 
-    // 1️⃣ direct fields
     if (typeof data.message === "string") return data.message;
     if (typeof data.error === "string") return data.error;
     if (typeof data.detail === "string") return data.detail;
 
-    // 2️⃣ array response
-    if (Array.isArray(data)) {
-      return data.join(", ");
-    }
+    if (Array.isArray(data)) return data.join(", ");
 
-    // 3️⃣ nested validation errors (Django / DRF / custom)
     const messages: string[] = [];
 
     Object.values(data).forEach((value) => {
@@ -76,25 +79,21 @@ export const parseError = (err: unknown): string => {
       }
     });
 
-    if (messages.length > 0) {
-      return messages.join(", ");
-    }
+    if (messages.length > 0) return messages.join(", ");
 
-    // fallback
     return err.message || "Request failed";
   }
 
-  // ✅ JS error
-  if (err instanceof Error) {
-    return err.message;
-  }
+  if (err instanceof Error) return err.message;
 
   return "Something went wrong";
 };
 
 /* ================= REGISTER ================= */
 
-export const registerUser = async (data: RegisterPayload): Promise<any> => {
+export const registerUser = async (
+  data: RegisterPayload
+): Promise<ApiResponse> => {
   try {
     const res = await api.post("/register/", data);
     return res.data;
@@ -105,7 +104,9 @@ export const registerUser = async (data: RegisterPayload): Promise<any> => {
 
 /* ================= LOGIN ================= */
 
-export const loginUser = async (data: LoginPayload): Promise<LoginResponse> => {
+export const loginUser = async (
+  data: LoginPayload
+): Promise<LoginResponse> => {
   try {
     const res = await api.post("/login/", data);
 
@@ -119,47 +120,72 @@ export const loginUser = async (data: LoginPayload): Promise<LoginResponse> => {
   }
 };
 
+
+export const checkUserExists = async (payload: {
+  username: string;
+  email: string;
+  phone: string;
+}) => {
+  const res = await api.post("/check-user-exists/", payload);
+  return res.data;
+};
 /* ================= VERIFY OTP ================= */
 
-export const verifyOtp = async (email: string, otp: string): Promise<any> => {
+export const verifyOtp = async (
+  payload: VerifyOtpPayload
+): Promise<ApiResponse> => {
   try {
-    const res = await api.post("/verify-email/", { email, otp });
+    const res = await api.post("/verify-email/", payload);
 
-    if (res.data.status !== "success") {
-      throw new Error(res.data.message || res.data.error || "Invalid OTP");
-    }
+    // ✅ HANDLE FAILURE RESPONSE (if backend returns 200 but error inside)
+    if (
+  res.data?.status === "error" ||
+  res.data?.error ||
+  res.data?.success === false
+) {
+  throw new Error(
+    res.data.message || res.data.error || "Invalid OTP"
+  );
+}
 
     return res.data;
   } catch (err) {
-    throw new Error(parseError(err));
-  }
-};
+if (axios.isAxiosError(err) && err.response?.data) {
+    const data = err.response.data;
 
+    throw new Error(
+      data.message ||
+      data.error ||
+      "Invalid OTP"
+    );
+  }
+
+  throw new Error(parseError(err));  }
+};
 /* ================= RESEND OTP ================= */
 
-export const resendOtp = async (email: string): Promise<any> => {
+export const resendOtp = async (
+  email: string
+): Promise<ApiResponse> => {
   try {
     const res = await api.post("/resend-email-otp/", { email });
     return res.data;
-  } catch (err: unknown) {
-    // preserve backend response (rate limit, blocked, etc.)
-    if (axios.isAxiosError(err) && err.response) {
-      throw err;
-    }
-
-    throw new Error(parseError(err));
+  } catch (err) {
+    throw new Error(parseError(err)); // ✅ FIXED (no raw axios throw)
   }
 };
 
 /* ================= FORGOT PASSWORD ================= */
 
-export const forgotPassword = async (email: string): Promise<any> => {
+export const forgotPassword = async (
+  email: string
+): Promise<ApiResponse> => {
   try {
     const res = await api.post("/forgot-password/", { email });
 
     if (res.data?.error) {
       throw new Error(
-        res.data.message || res.data.error || "Failed to send reset link",
+        res.data.message || res.data.error || "Failed to send reset link"
       );
     }
 
@@ -175,13 +201,13 @@ export const resetPassword = async (data: {
   uid: string;
   token: string;
   password: string;
-}): Promise<any> => {
+}): Promise<ApiResponse> => {
   try {
     const res = await api.post("/reset-password/", data);
 
     if (res.data?.error) {
       throw new Error(
-        res.data.error || res.data.message || "Failed to reset password",
+        res.data.error || res.data.message || "Failed to reset password"
       );
     }
 
@@ -202,24 +228,13 @@ export const logoutUser = async (): Promise<void> => {
       await api.post("/logout/", { refresh });
     }
   } catch {
-    // silent fail → don't block logout
+    // silent fail
   } finally {
-    // always clear storage
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    sessionStorage.removeItem("access");
-    sessionStorage.removeItem("refresh");
-    localStorage.removeItem("rememberMe");
+    tokenService.clear();
   }
 };
 
 /* ================= PROFILE ================= */
-
-export type UserProfile = {
-  id: string;
-  email: string;
-  username?: string;
-};
 
 export const getProfile = async (): Promise<UserProfile> => {
   try {
@@ -229,3 +244,236 @@ export const getProfile = async (): Promise<UserProfile> => {
     throw new Error(parseError(err));
   }
 };
+
+
+
+
+// import api from "@/lib/api";
+// import { tokenService } from "@/lib/auth";
+// import axios from "axios";
+
+
+// /* ================= TYPES ================= */
+
+// export type RegisterPayload = {
+//   email: string;
+//   password: string;
+//   username?: string;
+// };
+
+// export type LoginPayload = {
+//   identifier: string;
+//   password: string;
+// };  
+
+// export type AuthResponse = {
+//   access: string;
+//   refresh: string;
+//   user?: {
+//     id: string;
+//     email: string;
+//   };
+// };
+// export type LoginResponse = {
+//   message: string;
+// username: string;
+//   tokens: {
+//     access: string;
+//     refresh: string;
+//   };
+
+//   role: "ADMIN" | "SUPER_ADMIN" | "USER";
+
+//   redirect_to: string;
+
+//   dhan_login_url: string | null;
+
+//   email_verification_required?: boolean;
+//   email?: string;
+// };
+// /* ================= ERROR HANDLER ================= */
+
+// type ApiError = {
+//   message?: string;
+//   error?: string;
+//   detail?: string;
+//   [key: string]: any;
+// };
+
+// export const parseError = (err: unknown): string => {
+//   // ✅ Axios error (backend response)
+//   if (axios.isAxiosError(err)) {
+//     const data = err.response?.data as ApiError | undefined;
+
+//     if (!data) return err.message || "Request failed";
+
+//     // 1️⃣ direct fields
+//     if (typeof data.message === "string") return data.message;
+//     if (typeof data.error === "string") return data.error;
+//     if (typeof data.detail === "string") return data.detail;
+
+//     // 2️⃣ array response
+//     if (Array.isArray(data)) {
+//       return data.join(", ");
+//     }
+
+//     // 3️⃣ nested validation errors (Django / DRF / custom)
+//     const messages: string[] = [];
+
+//     Object.values(data).forEach((value) => {
+//       if (Array.isArray(value)) {
+//         messages.push(...value.map(String));
+//       } else if (typeof value === "string") {
+//         messages.push(value);
+//       }
+//     });
+
+//     if (messages.length > 0) {
+//       return messages.join(", ");
+//     }
+
+//     // fallback
+//     return err.message || "Request failed";
+//   }
+
+//   // ✅ JS error
+//   if (err instanceof Error) {
+//     return err.message;
+//   }
+
+//   return "Something went wrong";
+// };
+
+// /* ================= REGISTER ================= */
+
+// export const registerUser = async (data: RegisterPayload): Promise<any> => {
+//   try {
+//     const res = await api.post("/register/", data);
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= LOGIN ================= */
+
+// export const loginUser = async (data: LoginPayload): Promise<LoginResponse> => {
+//   try {
+//     const res = await api.post("/login/", data);
+
+//     if (res.data?.error) {
+//       throw new Error(res.data.error);
+//     }
+
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= VERIFY OTP ================= */
+
+// export const verifyOtp = async (email: string, otp: string): Promise<any> => {
+//   try {
+//     const res = await api.post("/verify-email/", { email, otp });
+
+//     if (res.data.status !== "success") {
+//       throw new Error(res.data.message || res.data.error || "Invalid OTP");
+//     }
+
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= RESEND OTP ================= */
+
+// export const resendOtp = async (email: string): Promise<any> => {
+//   try {
+//     const res = await api.post("/resend-email-otp/", { email });
+//     return res.data;
+//   } catch (err: unknown) {
+//     // preserve backend response (rate limit, blocked, etc.)
+//     if (axios.isAxiosError(err) && err.response) {
+//       throw err;
+//     }
+
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= FORGOT PASSWORD ================= */
+
+// export const forgotPassword = async (email: string): Promise<any> => {
+//   try {
+//     const res = await api.post("/forgot-password/", { email });
+
+//     if (res.data?.error) {
+//       throw new Error(
+//         res.data.message || res.data.error || "Failed to send reset link",
+//       );
+//     }
+
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= RESET PASSWORD ================= */
+
+// export const resetPassword = async (data: {
+//   uid: string;
+//   token: string;
+//   password: string;
+// }): Promise<any> => {
+//   try {
+//     const res = await api.post("/reset-password/", data);
+
+//     if (res.data?.error) {
+//       throw new Error(
+//         res.data.error || res.data.message || "Failed to reset password",
+//       );
+//     }
+
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+
+// /* ================= LOGOUT ================= */
+
+// export const logoutUser = async (): Promise<void> => {
+//   try {
+//     const refresh =
+//       localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
+
+//     if (refresh) {
+//       await api.post("/logout/", { refresh });
+//     }
+//   } catch {
+//     // silent fail
+//   } finally {
+//     tokenService.clear();   // ✅ keep this
+//   }
+// };
+
+// /* ================= PROFILE ================= */
+
+// export type UserProfile = {
+//   id: string;
+//   email: string;
+//   username?: string;
+// };
+
+// export const getProfile = async (): Promise<UserProfile> => {
+//   try {
+//     const res = await api.get("/profile/");
+//     return res.data;
+//   } catch (err) {
+//     throw new Error(parseError(err));
+//   }
+// };
+

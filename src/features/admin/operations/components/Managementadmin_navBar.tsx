@@ -15,7 +15,8 @@ import { useTheme } from "@/context/ThemeContext";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { logout } from "@/lib/api";
-import { userService } from "@/lib/auth";
+import { useAuthStore } from "@/store/authStore";
+// import { userService } from "@/lib/auth";
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -36,17 +37,7 @@ export default function Navbar() {
     { label: "Order Logs", icon: FileText, to: "/admin/orders" },
     { label: "Error Logs", icon: AlertTriangle, to: "/admin/errors" },
   ];
-  const [username, setUsername] = useState<string | null>(null);
-  useEffect(() => {
-    // ✅ set initial value
-    setUsername(userService.get());
-
-    // ✅ sync across tabs
-    const sync = () => setUsername(userService.get());
-
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  const user = useAuthStore((s) => s.user);  
  useEffect(() => {
   const handleClickOutside = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -161,12 +152,24 @@ export default function Navbar() {
           </button>
 
           {/* PROFILE */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border">
-            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
-              <Shield size={14} className="text-blue-400" />
-            </div>
-            <span className="text-sm text-muted-foreground">{username}</span>
-          </div>
+        <button
+  onClick={() => {
+    navigate({ to: "/admin/profile" });
+  }}
+  className="
+    hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
+    bg-card border border-border
+    hover:bg-muted/60 transition cursor-pointer
+  "
+>
+  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
+    <Shield size={14} className="text-blue-400" />
+  </div>
+
+  <span className="text-sm text-muted-foreground">
+    { user ? user.username :"Admin"}
+  </span>
+</button>
 
           {/* LOGOUT */}
           <button
@@ -239,14 +242,24 @@ export default function Navbar() {
 
         {/* PROFILE */}
         <div className="mt-auto pt-4 border-t border-border">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted">
-            <div className="w-7 h-7 rounded-full bg-background flex items-center justify-center">
-              <Shield size={16} className="text-gray-400" />
-            </div>
-            <span className="text-sm text-muted-foreground truncate">
-              {username}
-            </span>
-          </div>
+        <button
+  onClick={() => {
+    setOpen(false);
+    navigate({ to: "/admin/profile" });
+  }}
+  className="
+    w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-muted
+    hover:bg-muted/70 transition
+  "
+>
+  <div className="w-7 h-7 rounded-full bg-background flex items-center justify-center">
+    <Shield size={16} className="text-gray-400" />
+  </div>
+
+  <span className="text-sm text-muted-foreground truncate">
+    { user ? user.username :"Admin"}
+  </span>
+</button>
 
           {/* LOGOUT */}
           <button
