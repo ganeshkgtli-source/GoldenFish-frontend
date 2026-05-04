@@ -35,7 +35,37 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: "auth-storage", // localStorage key
+      name: "auth-storage",
+
+      // 🔥 ADD THIS
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );
+
+// export const useAuthStore = create<AuthState>()(
+//   persist(
+//     (set) => ({
+//       user: null,
+//       isAuthenticated: false,
+
+//       setUser: (user) =>
+//         set({
+//           user,
+//           isAuthenticated: true,
+//         }),
+
+//       clearUser: () =>
+//         set({
+//           user: null,
+//           isAuthenticated: false,
+//         }),
+//     }),
+//     {
+//       name: "auth-storage", // localStorage key
+//     }
+//   )
+// );

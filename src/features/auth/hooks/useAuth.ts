@@ -135,14 +135,41 @@ export const useLogout = () => {
     mutationFn: logoutUser,
 
     onSuccess: () => {
-      clearUser();
+      console.log("✅ Logout API success");
+    },
+
+    onError: (err) => {
+      console.log("⚠️ Logout API failed (ignored):", err);
     },
 
     onSettled: () => {
-      queryClient.clear();
+      // 🔥 FULL CLEANUP (CRITICAL)
+      tokenService.clear();     // remove access + refresh tokens
+      sessionService.clear();   // clear session flag
+      clearUser();              // clear Zustand user
+      queryClient.clear();      // clear React Query cache
+
+      // 🔥 HARD REDIRECT (ensures full reset)
+      window.location.href = "/login";
     },
   });
 };
+
+// export const useLogout = () => {
+//   const queryClient = useQueryClient();
+//   const clearUser = useAuthStore((s) => s.clearUser);
+
+//   return useMutation({
+//     mutationFn: logoutUser,
+
+//     onSuccess: () => {
+//   console.log("✅ Logout success");
+// },
+//     onSettled: () => {
+//       queryClient.clear();
+//     },
+//   });
+// };
 
 /* ================= PROFILE ================= */
 

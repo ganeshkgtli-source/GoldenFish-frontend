@@ -152,7 +152,7 @@ const getAvatarColor = (name: string = "") => {
 </div>
 
         {/* TABLE */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card overflow-hidden ">
           <div className="overflow-x-auto">
 
             <div className="grid grid-cols-[140px_120px_120px_120px_100px] md:grid-cols-5 px-4 md:px-6 py-3 text-xs text-muted-foreground border-b border-border min-w-[600px]">

@@ -83,12 +83,25 @@ export const hasRole = (allowed: Role[]): boolean => {
 /* ================= ROUTE GUARDS ================= */
 
 export const requireAuth = () => {
+  const token = tokenService.getAccess();
   const { user } = useAuthStore.getState();
 
-  if (!user) {
+  // ❌ No token → logout
+  if (!token || !isTokenValid(token)) {
     throw redirect({ to: "/login" });
   }
+
+  // ✅ Token exists → allow (user will be restored)
+  return;
 };
+
+// export const requireAuth = () => {
+//   const { user } = useAuthStore.getState();
+
+//   if (!user) {
+//     throw redirect({ to: "/login" });
+//   }
+// };
 
 export const requireGuest = () => {
   const { user } = useAuthStore.getState();

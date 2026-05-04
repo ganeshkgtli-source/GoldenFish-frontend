@@ -56,7 +56,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     const res = await loginMutation.mutateAsync(form);
-
+ console.log(res)
     // 🔥 1. OTP FLOW (must be first)
     if (res?.email_verification_required) {
       setEmail(res.email || form.identifier);
@@ -106,7 +106,7 @@ if (res.redirect_to) {
   return;
 }
 
-navigate({ to: "/home", replace: true });
+navigate({ to: "/dashboard", replace: true });
   } catch (err: unknown) {
     const data = (err as any)?.response?.data ?? {};
 

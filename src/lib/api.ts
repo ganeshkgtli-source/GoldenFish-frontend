@@ -19,15 +19,22 @@ headers: { "Content-Type": "application/json" },
 
 /* ================= PUBLIC ROUTES ================= */
 
-const PUBLIC_ROUTES = new Set([
-"/register/",
-"/login/",
-"/verify-email/",
-"/resend-email-otp/",
-"/token/refresh/",
-"/forgot-password/",
-"/reset-password/",
-]);
+const PUBLIC_ROUTES = [
+  "/register/",
+  "/login/",
+  "/verify-email/",
+  "/resend-email-otp/",
+  "/token/refresh/",
+  "/forgot-password/",
+  "/reset-password/",
+];
+
+const isPublicRoute = (url?: string) => {
+  if (!url) return false;
+  return PUBLIC_ROUTES.some((route: string) =>
+    url.includes(route)
+  );
+};
 
 /* ================= REQUEST INTERCEPTOR ================= */
 
@@ -35,7 +42,7 @@ api.interceptors.request.use(
 (config: InternalAxiosRequestConfig) => {
 const token = tokenService.getAccess();
 
-if (token && config.url && !PUBLIC_ROUTES.has(config.url)) {
+if (token && config.url && !isPublicRoute(config.url)) {
   config.headers.set("Authorization", `Bearer ${token}`);
 }
 
@@ -127,30 +134,61 @@ return refreshPromise;
 
 /* ================= INIT SESSION ================= */
 
-export const initApiAuth = async () => {
-  const access = tokenService.getAccess();
-  const refresh = tokenService.getRefresh();
-  const rememberMe = localStorage.getItem("rememberMe");
+let initPromise: Promise<boolean> | null = null;
 
-  if (!refresh) return false;
+export const initApiAuth = async (): Promise<boolean> => {
+  if (initPromise) return initPromise;
 
-  // 🔥 if access token expired → try refresh
-  if (!access || !isTokenValid(access)) {
-    const success = await refreshAccessToken();
-    return success;
-  }
+  initPromise = (async () => {
+    try {
+      const access = tokenService.getAccess();
+      const refresh = tokenService.getRefresh();
 
-  if (rememberMe === "false" && !sessionStorage.getItem("sessionAlive")) {
-    logout();
-    return false;
-  }
+      if (!refresh) return false;
 
-  sessionStorage.setItem("sessionAlive", "true");
+      if (!access || !isTokenValid(access)) {
+        return await refreshAccessToken();
+      }
 
-  scheduleRefresh(access);
+      return true;
+    } catch {
+      logout();
+      return false;
+    } finally {
+      // allow retry later if needed
+      setTimeout(() => {
+        initPromise = null;
+      }, 0);
+    }
+  })();
 
-  return true;
+  return initPromise;
 };
+
+// export const initApiAuth = async () => {
+//   const access = tokenService.getAccess();
+//   const refresh = tokenService.getRefresh();
+//   const rememberMe = localStorage.getItem("rememberMe");
+
+//   if (!refresh) return false;
+
+//   // 🔥 if access token expired → try refresh
+//   if (!access || !isTokenValid(access)) {
+//     const success = await refreshAccessToken();
+//     return success;
+//   }
+
+//   if (rememberMe === "false" && !sessionStorage.getItem("sessionAlive")) {
+//     logout();
+//     return false;
+//   }
+
+//   sessionStorage.setItem("sessionAlive", "true");
+
+//   scheduleRefresh(access);
+
+//   return true;
+// };
 
 /* ================= RESPONSE INTERCEPTOR ================= */
 
@@ -160,16 +198,14 @@ api.interceptors.response.use(
     const req: any = error.config;
     if (!req) return Promise.reject(error);
 
-    const isPublic = PUBLIC_ROUTES.has(req.url);
-    req._retryCount = req._retryCount || 0;
+    const isPublic = isPublicRoute(req.url);
 
-    // 🔥 only handle 401 from protected routes
     if (
       error.response?.status === 401 &&
       !isPublic &&
-      req._retryCount < 1
+      !req._retry
     ) {
-      req._retryCount++;
+      req._retry = true;
 
       const success = await refreshAccessToken();
 
@@ -181,13 +217,47 @@ api.interceptors.response.use(
         return api(req);
       }
 
-      // ❌ refresh failed → logout
       logout();
     }
 
     return Promise.reject(error);
   }
 );
+
+// api.interceptors.response.use(
+//   (res) => res,
+//   async (error) => {
+//     const req: any = error.config;
+//     if (!req) return Promise.reject(error);
+
+//     const isPublic = PUBLIC_ROUTES.has(req.url);
+//     req._retryCount = req._retryCount || 0;
+
+//     // 🔥 only handle 401 from protected routes
+//     if (
+//       error.response?.status === 401 &&
+//       !isPublic &&
+//       req._retryCount < 1
+//     ) {
+//       req._retryCount++;
+
+//       const success = await refreshAccessToken();
+
+//       if (success) {
+//         req.headers.set(
+//           "Authorization",
+//           `Bearer ${tokenService.getAccess()}`
+//         );
+//         return api(req);
+//       }
+
+//       // ❌ refresh failed → logout
+//       logout();
+//     }
+
+//     return Promise.reject(error);
+//   }
+// );
 
 /* ================= CROSS TAB SYNC ================= */
 
