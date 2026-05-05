@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+ 
 
 type Stock = {
   name: string;
@@ -16,11 +17,11 @@ export default function WatchlistSidebar() {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        // const res = await api.post("market/quotes/", {
-        //   securityIds: ["13", "25", "1333", "11536"],
-        //   const res = none ;
-        // });
-const res = None ;
+        const res = await api.post("market/quotes/", {
+          securityIds: ["13", "25", "1333", "11536"],
+          // const res = none ;
+        });
+// const res = None ;
         console.log("API RESPONSE:", res.data);
 
         if (res.data?.status !== "success") {
@@ -43,6 +44,8 @@ const res = None ;
           { name: "TCS", price: 3420, change: 0 },
           { name: "NIFTY", price: 24227, change: 0 },
                     { name: "BANKNIFTY", price: 24227, change: 0 },
+                     { name: "BANKNIFTY", price: 24227, change: 0 },
+ 
 
         ]);
       }
@@ -52,6 +55,7 @@ const res = None ;
   }, []);
 
   /* ================= LIVE DATA (MOCK / WS TOGGLE) ================= */
+
   useEffect(() => {
     const USE_WS = false; // 🔥 CHANGE TO true WHEN BACKEND READY
 
@@ -163,60 +167,69 @@ const res = None ;
   }, [stocks, query]);
 
   /* ================= UI ================= */
-   return (
-    <div className="flex flex-col gap-3">
+  return (
+  <div className="flex flex-col gap-3 w-full">
 
-      {/* SEARCH */}
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search stocks..."
-        className="w-full px-3 py-2 rounded-lg bg-[#0f172a] text-sm border border-white/5 outline-none"
-      />
+    {/* SEARCH */}
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search stocks..."
+      className="wizard-input text-sm border-none bg-muted focus:ring-1 focus:ring-primary/40"
+    />
 
-      {/* HEADER */}
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>Watchlist</span>
-        <span className="cursor-pointer">+</span>
-      </div>
-
-      {/* LIST */}
-      <div className="flex flex-col gap-2">
-        {filtered.map((s, i) => {
-          const isUp = s.change >= 0;
-
-          return (
-            <div
-              key={i}
-              className={`flex justify-between items-center px-3 py-2 rounded-lg transition
-              ${isUp ? "bg-green-500/10" : "bg-red-500/10"}
-              `}
-            >
-              {/* LEFT */}
-              <div>
-                <p className="text-sm font-medium">{s.name}</p>
-                <p className="text-[10px] text-gray-500">NSE</p>
-              </div>
-
-              {/* RIGHT */}
-              <div className="text-right">
-                <p className="text-sm font-semibold">
-                  ₹{s.price.toLocaleString()}
-                </p>
-
-                <p
-                  className={`text-[10px] ${
-                    isUp ? "text-green-400" : "text-red-400"
-                  }`}
-                >
-                  {isUp ? "+" : ""}
-                  {s.change}%
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    {/* HEADER */}
+    <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
+      <span className="font-medium">Watchlist</span>
+      {/* <span className="cursor-pointer hover:text-foreground transition">+</span> */}
     </div>
-  );
+
+    {/* LIST (SCROLLABLE) */}
+    <div className="flex flex-col gap-2 max-h-[235px] overflow-y-auto scrollbar-hide pr-1">
+
+      {filtered.map((s, i) => {
+        const isUp = s.change >= 0;
+
+        return (
+          <div
+            key={i}
+            className={`
+              flex justify-between items-center px-3 py-2 rounded-xl
+              transition-all duration-200
+              hover:bg-muted/60
+              ${isUp ? "bg-green-500/5" : "bg-red-500/5"}
+            `}
+          >
+            {/* LEFT */}
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-foreground">
+                {s.name}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                NSE
+              </span>
+            </div>
+
+            {/* RIGHT */}
+            <div className="text-right">
+              <p className="text-sm font-semibold text-foreground">
+                ₹{s.price.toLocaleString()}
+              </p>
+
+              <p
+                className={`text-[11px] font-medium ${
+                  isUp ? "text-green-500" : "text-red-500"
+                }`}
+              >
+                {isUp ? "+" : ""}
+                {s.change}%
+              </p>
+            </div>
+          </div>
+        );
+      })}
+
+    </div>
+  </div>
+);
 }

@@ -15,12 +15,11 @@ import TradeTable from "../components/TradeTable";
 import type { Trade } from "../components/TradeTable";
 import OrdersTable from "../components/OrdersTable";
 import PositionsTable from "../components/PositionsTable";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import FilterBar from "../components/FilterBar";
 import { requireAdmin } from "@/lib/auth";
-import type { Order } from "../components/OrdersTable"; // ✅ ADD
+import type { Order } from "../components/OrdersTable";
 
-/* ✅ ADDED TYPES (no removal) */
 const validTabs = ["trades", "orders", "positions", "errors"] as const;
 type TabType = (typeof validTabs)[number];
 
@@ -28,170 +27,129 @@ export const Route = createFileRoute("/admin/client/$id")({
   beforeLoad: () => {
     requireAdmin();
   },
-
-  /* ✅ FIXED validateSearch (typed properly) */
   validateSearch: (search: unknown): { tab: TabType } => {
     const s = search as Record<string, unknown>;
-
     const tab =
-      typeof s.tab === "string" &&
-      (validTabs as readonly string[]).includes(s.tab)
+      typeof s.tab === "string" && (validTabs as readonly string[]).includes(s.tab)
         ? (s.tab as TabType)
         : "trades";
-
     return { tab };
   },
-
   component: ClientDetailPage,
 });
+
+/* ─── DUMMY DATA (backend-ready shapes) ──────────────────── */
+
+const DUMMY_TRADES: Trade[] = [
+  {
+    id: "1", date: "2026-04-12", symbol: "NIFTY", exchange: "NSE",
+    type: "BUY", expiry: "2026-04-25", entryTime: "10:30 AM",
+    entryPrice: 210, status: "OPEN", pnlLot: 120, totalPnl: 1200,
+    ltp: 121, spot: 45, strike: 34,
+  },
+  {
+    id: "2", date: "2026-04-13", symbol: "BANKNIFTY", exchange: "NSE",
+    type: "SELL", expiry: "2026-04-25", entryTime: "11:00 AM",
+    entryPrice: 480, status: "CLOSED", exitPrice: 465, exitTime: "02:15 PM",
+    pnlLot: -80, totalPnl: -800, ltp: 465, spot: 46, strike: 33,
+  },
+];
+
+const DUMMY_ORDERS: Order[] = [
+  {
+    id: "1", date: "2026-04-12", symbol: "NIFTY", exchange: "NSE",
+    type: "BUY", expiry: "2026-04-25", entryTime: "10:30 AM",
+    entryPrice: 210, status: "PENDING", pnlLot: 120, totalPnl: 1200,
+    ltp: 121, spot: 45, strike: 34, quantity: 121,
+  },
+];
+
+/* ─── PAGE ───────────────────────────────────────────────── */
 
 export default function ClientDetailPage() {
   const { id } = useParams({ strict: false });
   const { data, isLoading } = useClient(id!);
 
-  /* ✅ FIXED useSearch typing */
-  const searchParams = useSearch({
-    from: "/admin/client/$id",
-  });
+  const searchParams = useSearch({ from: "/admin/client/$id" });
+  const navigate = useNavigate({ from: "/admin/client/$id" });
 
-const navigate = useNavigate({
-  from: "/admin/client/$id",
-});
-  /* ✅ FIXED initial state typing */
   const [activeTab, setActiveTab] = useState<TabType>(
     () => searchParams.tab ?? "trades"
   );
 
-  /* 🔥 SYNC URL → STATE */
+  /* sync URL → state */
   useEffect(() => {
     if (searchParams.tab && searchParams.tab !== activeTab) {
       setActiveTab(searchParams.tab);
     }
   }, [searchParams.tab]);
 
-  /* 🔥 HANDLE TAB CHANGE */
-  const handleTabChange = (tab: typeof activeTab) => {
+  const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-
-    /* ✅ FIXED navigate typing */
-    navigate({
-  search: (prev: { tab?: TabType }) => ({
-    ...(prev ?? {}),
-    tab,
-  }),
-});
+    navigate({ search: (prev: { tab?: TabType }) => ({ ...(prev ?? {}), tab }) });
   };
 
-  /* 🔥 FILTER STATES */
+  /* filter state */
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [toDate, setToDate]   = useState("");
 
-  /* 🔥 MOCK DATA */
-  const trades: Trade[] = [
-    {
-      id: "1",
-      date: "2026-04-12",
-      symbol: "NIFTY",
-      exchange: "NSE",
-      type: "BUY",
-      expiry: "2026-04-25",
-      entryTime: "10:30 AM",
-      entryPrice: 210,
-      status: "OPEN",
-      pnlLot: 120,
-      totalPnl: 1200,
-      ltp: 121,
-      spot: 45,
-      strike: 34,
-    },
-  ];
-
-const orders: Order[] = [
-     {
-      id: "1",
-      date: "2026-04-12",
-      symbol: "NIFTY",
-      exchange: "NSE",
-      type: "BUY",
-      expiry: "2026-04-25",
-      entryTime: "10:30 AM",
-      entryPrice: 210,
-      status: "PENDING",
-      pnlLot: 120,
-      totalPnl: 1200,
-      ltp: 121,
-      spot: 45,
-      strike: 34,
-      quantity:121
-    },
-];
- 
-
+  /* positions with live price simulation */
   const [positions, setPositions] = useState([
-    {
-      id: "1",
-      symbol: "NIFTY",
-      exchange: "NSE",
-      quantity: 50,
-      avgPrice: 200,
-      ltp: 210,
-    },
+    { id: "1", symbol: "NIFTY",     exchange: "NSE", quantity: 50,  avgPrice: 200, ltp: 210 },
+    { id: "2", symbol: "BANKNIFTY", exchange: "NSE", quantity: 25,  avgPrice: 480, ltp: 472 },
   ]);
 
-  /* 🔥 FILTER LOGIC */
-  const filteredTrades = useMemo(() => {
-    return trades.filter((t) => {
-      const s =
-        t.symbol.toLowerCase().includes(search.toLowerCase()) ||
-        t.exchange.toLowerCase().includes(search.toLowerCase());
+  // FIX: store interval ref so cleanup is guaranteed on unmount
+  const priceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-      const st = status === "ALL" || t.status === status;
-
-      const d = new Date(t.date);
-      const f = !fromDate || d >= new Date(fromDate);
-      const to = !toDate || d <= new Date(toDate);
-
-      return s && st && f && to;
-    });
-  }, [trades, search, status, fromDate, toDate]);
-
-  const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      const s =
-        o.symbol.toLowerCase().includes(search.toLowerCase()) ||
-        o.exchange.toLowerCase().includes(search.toLowerCase());
-
-      const st = status === "ALL" || o.status === status;
-
-      const d = new Date(o.date);
-      const f = !fromDate || d >= new Date(fromDate);
-      const to = !toDate || d <= new Date(toDate);
-
-      return s && st && f && to;
-    });
-  }, [orders, search, status, fromDate, toDate]);
-
-  const filteredPositions = useMemo(() => {
-    return positions.filter((p) =>
-      p.symbol.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [positions, search]);
-
-  /* 🔥 LIVE PRICE */
   useEffect(() => {
-    const interval = setInterval(() => {
+    priceIntervalRef.current = setInterval(() => {
       setPositions((prev) =>
-        prev.map((p) => ({
-          ...p,
-          ltp: p.ltp + (Math.random() * 10 - 5),
-        }))
+        prev.map((p) => ({ ...p, ltp: +(p.ltp + (Math.random() * 10 - 5)).toFixed(2) }))
       );
     }, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      // FIX: was missing ref — interval persisted after tab change, stacking memory leaks
+      if (priceIntervalRef.current) clearInterval(priceIntervalRef.current);
+    };
   }, []);
+
+  /* filter helpers */
+  const matchDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const f = !fromDate || d >= new Date(fromDate);
+    const t = !toDate   || d <= new Date(toDate);
+    return f && t;
+  };
+
+  const filteredTrades = useMemo(() =>
+    DUMMY_TRADES.filter((t) => {
+      const matchSearch =
+        t.symbol.toLowerCase().includes(search.toLowerCase()) ||
+        t.exchange.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = status === "ALL" || t.status === status;
+      return matchSearch && matchStatus && matchDate(t.date);
+    }),
+  [search, status, fromDate, toDate]);
+
+  const filteredOrders = useMemo(() =>
+    DUMMY_ORDERS.filter((o) => {
+      const matchSearch =
+        o.symbol.toLowerCase().includes(search.toLowerCase()) ||
+        o.exchange.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = status === "ALL" || o.status === status;
+      return matchSearch && matchStatus && matchDate(o.date);
+    }),
+  [search, status, fromDate, toDate]);
+
+  const filteredPositions = useMemo(() =>
+    positions.filter((p) =>
+      p.symbol.toLowerCase().includes(search.toLowerCase())
+    ),
+  [positions, search]);
 
   const totalPnl = positions.reduce(
     (acc, p) => acc + (p.ltp - p.avgPrice) * p.quantity,
@@ -205,36 +163,24 @@ const orders: Order[] = [
       <ManagementAdminNavbar />
 
       <main className="p-4 md:p-6 space-y-6 flex-1">
+
+        {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
           {/* CLIENT */}
           <div className="rounded-2xl border border-border bg-card p-5 flex items-center justify-between hover:shadow-md transition">
             <div className="flex items-center gap-3">
-
               <div className="w-10 h-10 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center font-semibold">
-                {
-                  data?.broker_session?.dhan_client_name?.[0]?.toUpperCase() ||
-                  data?.username?.[0]?.toUpperCase() ||
-                  "U"
-                }
+                {data?.broker_session?.dhan_client_name?.[0]?.toUpperCase() ||
+                  data?.username?.[0]?.toUpperCase() || "U"}
               </div>
-
               <div>
                 <p className="text-sm font-semibold">
-                  {
-                    data?.broker_session?.dhan_client_name ||
-                    data?.username ||
-                    "Unknown User"
-                  }
+                  {data?.broker_session?.dhan_client_name || data?.username || "Unknown User"}
                 </p>
-
-                <p className="text-xs text-muted-foreground">
-                  ID: {data?.client_id || "—"}
-                </p>
+                <p className="text-xs text-muted-foreground">ID: {data?.client_id || "—"}</p>
               </div>
-
             </div>
-
             <User size={18} />
           </div>
 
@@ -242,11 +188,7 @@ const orders: Order[] = [
           <div className="rounded-2xl border border-border bg-card p-5 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Total P&L</p>
-              <p
-                className={`text-xl font-bold mt-1 ${
-                  totalPnl >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
+              <p className={`text-xl font-bold mt-1 ${totalPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
                 ₹{totalPnl.toFixed(0)}
               </p>
             </div>
@@ -257,9 +199,7 @@ const orders: Order[] = [
           <div className="rounded-2xl border border-border bg-card p-5 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">M2M</p>
-              <p className="text-xl font-bold text-blue-500 mt-1">
-                ₹{totalPnl.toFixed(0)}
-              </p>
+              <p className="text-xl font-bold text-blue-500 mt-1">₹{totalPnl.toFixed(0)}</p>
             </div>
             <Activity className="text-blue-500" />
           </div>
@@ -269,32 +209,28 @@ const orders: Order[] = [
             <div>
               <p className="text-xs text-muted-foreground">Joined</p>
               <p className="text-sm font-semibold mt-1">
-                {data?.date_joined
-                  ? new Date(data.date_joined).toLocaleDateString()
-                  : "--"}
+                {data?.date_joined ? new Date(data.date_joined).toLocaleDateString() : "--"}
               </p>
             </div>
             <Clock className="text-yellow-500" />
           </div>
         </div>
 
-        {/* 🔥 TABS */}
+        {/* TABS */}
         <div className="flex gap-2 border-b border-border">
           {[
-            { key: "trades", label: "Trades", icon: FileText },
-            { key: "orders", label: "Orders", icon: BarChart3 },
-            { key: "positions", label: "Positions", icon: Activity },
-            { key: "errors", label: "Errors", icon: AlertTriangle },
+            { key: "trades",    label: "Trades",    icon: FileText     },
+            { key: "orders",    label: "Orders",    icon: BarChart3    },
+            { key: "positions", label: "Positions", icon: Activity     },
+            { key: "errors",    label: "Errors",    icon: AlertTriangle },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.key}
-                onClick={() => handleTabChange(tab.key as TabType)} /* ✅ fixed */
+                onClick={() => handleTabChange(tab.key as TabType)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 ${
-                  activeTab === tab.key
-                    ? "border-red-500"
-                    : "border-transparent"
+                  activeTab === tab.key ? "border-red-500" : "border-transparent"
                 }`}
               >
                 <Icon size={16} />
@@ -304,7 +240,7 @@ const orders: Order[] = [
           })}
         </div>
 
-        {/* 🔥 CONTENT */}
+        {/* CONTENT */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-3 border-b border-border">
             <FilterBar
@@ -320,17 +256,13 @@ const orders: Order[] = [
             />
           </div>
 
-          {activeTab === "trades" && (
-            <TradeTable data={filteredTrades} />
-          )}
-          {activeTab === "orders" && (
-            <OrdersTable data={filteredOrders} />
-          )}
-          {activeTab === "positions" && (
-            <PositionsTable data={filteredPositions} />
-          )}
-          {activeTab === "errors" && (
-            <div className="p-10 text-center">Error logs coming soon</div>
+          {activeTab === "trades"    && <TradeTable data={filteredTrades} />}
+          {activeTab === "orders"    && <OrdersTable data={filteredOrders} />}
+          {activeTab === "positions" && <PositionsTable data={filteredPositions} />}
+          {activeTab === "errors"    && (
+            <div className="p-10 text-center text-muted-foreground text-sm">
+              Error logs coming soon — backend integration pending.
+            </div>
           )}
         </div>
       </main>

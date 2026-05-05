@@ -1,292 +1,433 @@
 import {
+  FileText, Moon,Sun,Menu,X,LayoutDashboard,LogOut,Briefcase,BarChart3,Wallet,User,// TrendingUp,
+  ChevronDown,
   Users,
   UserPlus,
-  FileText,
   AlertTriangle,
-  Moon,
-  Sun,
-  Menu,
-  X,
-  LayoutDashboard,
-  Shield,
-  LogOut,
 } from "lucide-react";
+
 import { useTheme } from "@/context/ThemeContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { logout } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-// import { userService } from "@/lib/auth";
+import { useLogout } from "@/features/auth/hooks/useAuth";
 
-export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  const [open, setOpen] = useState(false);
+/* ─── NAV CONFIG ─────────────────────────────────────────── */
 
-  const pathname = useRouterState({
-    select: (s) => s.location.pathname,
-  });
-  const navigate = useNavigate();
-  const handleLogout = () => {
-    logout(); // 🔥 stops refresh + clears tokens + role
-    navigate({ to: "/login" }); // 🔁 redirect
-  };
-  const navItems = [
-    { label: "Dashboard", icon: LayoutDashboard, to: "/admin/dashboard" },
+const NAV_ITEMS = [
+  { label: "Dashboard", icon: LayoutDashboard, to: "/admin/dashboard" },
     { label: "Clients", icon: Users, to: "/admin/clients" },
     { label: "Add Clients", icon: UserPlus, to: "/register" },
     { label: "Order Logs", icon: FileText, to: "/admin/orders" },
     { label: "Error Logs", icon: AlertTriangle, to: "/admin/errors" },
-  ];
-  const user = useAuthStore((s) => s.user);  
- useEffect(() => {
-  const handleClickOutside = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest("#mobile-menu") && !target.closest("#menu-btn")) {
-      setOpen(false);
-    }
-  };
+] as const;
 
-  if (open) {
-    window.addEventListener("click", handleClickOutside);
-  }
+  
+/* ─── TICKER DATA (static dummy — swap with real feed) ─── */
+// const TICKER = [
+//   { sym: "NIFTY",     val: "22,419.95", chg: "+0.42%" , up: true  },
+//   { sym: "BANKNIFTY", val: "48,320.10", chg: "-0.18%",  up: false },
+//   { sym: "SENSEX",    val: "73,851.40", chg: "+0.31%",  up: true  },
+//   { sym: "FINNIFTY",  val: "21,105.25", chg: "+0.67%",  up: true  },
+//   { sym: "MIDCPNIFTY",val: "10,922.70", chg: "-0.09%",  up: false },
+// ];
 
-  return () => {
-    window.removeEventListener("click", handleClickOutside);
-  };
-}, [open]);
+/* ════════════════════════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════════════════════ */
+export default function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+  const [mobileOpen, setMobileOpen]   = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [scrolled, setScrolled]       = useState(false);
+
+  const profileRef = useRef<HTMLDivElement>(null);
+  const mobileRef  = useRef<HTMLDivElement>(null);
+
+  const pathname = useRouterState({ select: s => s.location.pathname });
+  const navigate        = useNavigate();
+  const logoutMutation  = useLogout();
+  const user            = useAuthStore(s => s.user);
+
+  /* — shadow on scroll — */
   useEffect(() => {
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  /* — close menus on outside click — */
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
+        setProfileOpen(false);
+      if (mobileRef.current && !mobileRef.current.contains(e.target as Node))
+        setMobileOpen(false);
+    };
+    // document.addEventListener("mousedown", onClick);
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  /* — ESC close — */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMobileOpen(false); setProfileOpen(false); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  /* — close mobile on route change — */
+  useEffect(() => { setMobileOpen(false); setProfileOpen(false); }, [pathname]);
+
+  const handleLogout = () => {
+    if (logoutMutation.isPending) return;
+    logoutMutation.mutate();
+  };
+
+  const isActive = (to: string) =>
+    pathname === to || pathname.startsWith(to + "/");
+
+  /* ── RENDER ─────────────────────────────────────────────── */
   return (
-    <header
-      className="
-  sticky top-0 z-50
-  bg-background border-b border-border antialiased
-"
-    >
-      <div className="h-16 flex items-center justify-between px-4 md:px-6">
-        {/* LEFT */}
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => navigate({ to: "/admin/dashboard" })}
-        >
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl border border-border bg-card flex items-center justify-center">
-            <div className="w-4 h-4 border-2  border-red-500 rotate-45" />
+    <>
+      {/* ══ TICKER STRIP ═══════════════════════════════════ */}
+      {/* <div className="
+        w-full overflow-hidden
+        bg-card border-b border-border
+        text-xs font-mono
+        hidden lg:block
+      ">
+        <div className="flex animate-ticker whitespace-nowrap w-max">
+          {[...TICKER, ...TICKER].map((t, i) => (
+            <span key={i} className="inline-flex items-center gap-2 px-6 py-1.5 border-r border-border last:border-r-0">
+              <span className="text-muted-foreground font-semibold tracking-widest">{t.sym}</span>
+              <span className="text-foreground">{t.val}</span>
+              <span className={t.up ? "text-green-500" : "text-red-500"}>
+                {t.up ? "▲" : "▼"} {t.chg}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div> */}
+
+      {/* ══ MAIN HEADER ════════════════════════════════════ */}
+      <header className={`
+        sticky top-0 z-50 w-full
+        transition-all duration-300
+        bg-background/90 backdrop-blur-xl
+        border-b border-border
+        ${scrolled ? "shadow-[0_2px_24px_rgba(0,0,0,0.08)]" : ""}
+      `}>
+        <div className="h-15 flex items-center px-4 md:px-6   mx-auto w-full gap-4" style={{ height: "3.75rem" }}>
+
+          {/* ── LOGO ─────────────────────────────────────── */}
+          <button
+            onClick={() => navigate({ to: "/admin/dashboard" })}
+            className="flex items-center gap-2.5 flex-shrink-0 group"
+            aria-label="Go to dashboard"
+          >
+            {/* diamond mark */}
+            <div className="relative w-9 h-9 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden
+              group-hover:border-red-500/40 transition-colors duration-200">
+              <div className="w-3.5 h-3.5 border-2 border-red-500 rotate-45 transition-transform duration-300 group-hover:rotate-[225deg]" />
+              <div className="absolute inset-0 bg-red-500/0 group-hover:bg-red-500/5 transition-colors duration-200" />
+            </div>
+            <span className="text-red-500 font-bold text-base tracking-tight leading-none">
+              Golden<span className="text-foreground">Fish</span>
+            </span>
+          </button>
+
+          {/* ── CENTER NAV (desktop) ─────────────────────── */}
+          <nav className="hidden lg:flex flex-1 justify-center" aria-label="Main navigation">
+            <div className="flex items-center gap-0.5">
+              {NAV_ITEMS.map(item => {
+                const active = isActive(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`
+                      relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg
+                      text-sm font-medium transition-all duration-150
+                      ${active
+                        ? "text-foreground bg-muted"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      }
+                    `}
+                  >
+                    <item.icon
+                      size={15}
+                      className={`flex-shrink-0 transition-colors duration-150 ${active ? "text-red-500" : ""}`}
+                    />
+                    {item.label}
+
+                    {/* active pip */}
+                    {active && (
+                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+
+          {/* ── RIGHT ACTIONS ────────────────────────────── */}
+          <div className="flex items-center gap-2 ml-auto">
+
+            {/* market pulse indicator */}
+            {/* <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400">Market Open</span>
+            </div> */}
+
+            {/* theme toggle */}
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              className="
+                w-9 h-9 flex items-center justify-center rounded-xl
+                bg-card border border-border
+                hover:border-border/80 hover:bg-muted
+                transition-all duration-150
+              "
+            >
+              {theme === "dark"
+                ? <Sun  size={15} className="text-yellow-400" />
+                : <Moon size={15} className="text-slate-600"  />}
+            </button>
+
+            {/* ── PROFILE DROPDOWN ─────────────────────── */}
+            <div className="relative hidden md:block" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen(p => !p)}
+                className={`
+                  flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl
+                  border transition-all duration-150
+                  ${profileOpen
+                    ? "bg-muted border-border"
+                    : "bg-card border-border hover:bg-muted"}
+                `}
+              >
+                {/* avatar */}
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  {user?.username?.[0]?.toUpperCase() ?? "U"}
+                </div>
+                <span className="text-sm font-medium text-foreground max-w-[80px] truncate">
+                  {user?.username ??  ""}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`text-muted-foreground transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {/* dropdown */}
+              {profileOpen && (
+                <div className="
+                  absolute right-0 top-[calc(100%+8px)] w-52
+                  bg-card backdrop-blur-md border border-border rounded-2xl
+                  shadow-[0_8px_32px_rgba(0,0,0,0.12)]
+                  dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+                  overflow-hidden
+                  animate-in fade-in slide-in-from-top-2 duration-150
+                ">
+                  {/* user info header */}
+
+
+                  {/* <div className="px-4 py-3 border-b border-border bg-muted/40">
+                    <p className="text-sm font-semibold truncate">{user?.username ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">{user?.role ?? "user"}</p>
+                  </div> */}
+
+                  <div className="p-1.5 space-y-0.5">
+                    <DropdownItem
+                      icon={<User size={14} />}
+                      label="My Profile"
+                        // onClick={() => navigate({ to: "/admin/profile" })}
+                      onClick={() => { setProfileOpen(false); navigate({ to: "/admin/profile" }); }}
+                    />
+                    {/* <DropdownItem
+                      icon={<TrendingUp size={14} />}
+                      label="Trading Summary"
+                      onClick={() => { setProfileOpen(false); navigate({ to: "/dashboard" }); }}
+                    /> */}
+                  </div>
+
+                  <div className="p-1.5 border-t border-border">
+                    <button
+                      onClick={() => { setProfileOpen(false); handleLogout(); }}
+                      disabled={logoutMutation.isPending}
+                      className="
+                        w-full flex items-center gap-2.5 px-3 py-2 rounded-xl
+                        text-sm text-red-600 dark:text-red-400
+                        hover:bg-red-500/10 transition-colors duration-150
+                        disabled:opacity-50
+                      "
+                    >
+                      <LogOut size={14} />
+                      {logoutMutation.isPending ? "Logging out…" : "Logout"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* mobile hamburger */}
+            <button
+onClick={(e) => {
+    e.stopPropagation();
+    setMobileOpen((prev) => !prev);
+  }}              aria-label="Toggle mobile menu"
+              aria-expanded={mobileOpen}
+              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-border bg-card hover:bg-muted transition-colors duration-150"
+            >
+              <div className="relative w-4 h-4">
+                <span className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-100 rotate-0" : "opacity-0 rotate-90"}`}>
+                  <X size={16} />
+                </span>
+                <span className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-0 -rotate-90" : "opacity-100 rotate-0"}`}>
+                  <Menu size={16} />
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ══ MOBILE MENU ════════════════════════════════════ */}
+      {/* backdrop */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        className={`
+          fixed inset-0 z-40 bg-black/40 backdrop-blur-sm
+          transition-opacity duration-200 lg:hidden
+          ${mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
+        `}
+      />
+
+      {/* slide-down panel */}
+      <div
+        ref={mobileRef}
+        className={`
+          fixed top-[3.75rem] left-0 right-0 z-50 lg:hidden
+          transition-all duration-300 ease-out
+          ${mobileOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3 pointer-events-none"}
+        `}
+      >
+        <div className="mx-3 mt-2 rounded-2xl border border-border bg-card/98 backdrop-blur-xl shadow-2xl overflow-hidden">
+
+          {/* user strip */}
+          <div className="flex items-center gap-3 px-4 py-4 border-b border-border bg-muted/30">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold flex-shrink-0">
+              {user?.username?.[0]?.toUpperCase() ?? "U"}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{user?.username ?? "User"}</p>
+              {/* <p className="text-xs text-muted-foreground capitalize">{user?.role ?? "user"}</p> */}
+            </div>
+            {/* inline theme in mobile */}
+            {/* <button
+              onClick={toggleTheme}
+              className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-background"
+            >
+              {theme === "dark"
+                ? <Sun  size={14} className="text-yellow-400" />
+                : <Moon size={14} />}
+            </button> */}
           </div>
 
-          <span className="text-red-500 font-semibold text-base md:text-lg">
-            GoldenFish
-          </span>
-        </div>
-        {/* ================= DESKTOP NAV ================= */}
-        <div className="hidden lg:flex items-center gap-2">
-          {navItems.map((item) => {
-            const active =
-              pathname === item.to || pathname.startsWith(item.to + "/");
-
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`
-    relative group inline-flex items-center  gap-2
-    min-w-[110px] justify-center px-4 py-2 pb-2
-    text-[14px] font-medium
-    transition-colors duration-200
-
-    ${
-      active
-        ? "text-black dark:text-white"
-        : "text-muted-foreground hover:text-black dark:hover:text-white"
-    }
-  `}
-              >
-                {/* ICON */}
-                <item.icon
-                  size={16}
+          {/* nav items */}
+          <nav className="p-2 space-y-0.5">
+            {NAV_ITEMS.map((item, idx) => {
+              const active = isActive(item.to);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  style={{ animationDelay: `${idx * 40}ms` }}
                   className={`
-      transition-colors duration-200
-      ${
-        active
-          ? "text-blue-500 dark:text-blue-400"
-          : "text-muted-foreground group-hover:text-black dark:group-hover:text-white"
-      }
-    `}
-                />
+                    flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+                    transition-all duration-150
+                    ${active
+                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      : "text-foreground/80 hover:text-foreground hover:bg-muted"}
+                  `}
+                >
+                  <item.icon
+                    size={17}
+                    className={`flex-shrink-0 ${active ? "text-red-500" : "text-muted-foreground"}`}
+                  />
+                  {item.label}
+                  {active && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
 
-                {/* LABEL */}
-                <span className="whitespace-nowrap truncate max-w-[100px]">{item.label}</span>
-
-                {/* UNDERLINE */}
-                <span
-                  className={`
-      absolute left-0 bottom-0 h-[2px] w-full
-      bg-blue-500
-      origin-left transform-gpu
-      transition-transform duration-300
-      ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}
-    `}
-                />
-              </Link>
-            );
-          })}
-        </div>
-        {/* RIGHT */}
-        <div className="flex items-center gap-2 md:gap-3">
-          {/* THEME */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full
-            bg-card border border-border text-sm hover:bg-accent transition"
-          >
-            {theme === "dark" ? (
-              <Sun size={16} className="text-yellow-400" />
-            ) : (
-              <Moon size={16} />
-            )}
-          </button>
-
-          {/* PROFILE */}
-        <button
-  onClick={() => {
-    navigate({ to: "/admin/profile" });
-  }}
-  className="
-    hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
-    bg-card border border-border
-    hover:bg-muted/60 transition cursor-pointer
-  "
->
-  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
-    <Shield size={14} className="text-blue-400" />
-  </div>
-
-  <span className="text-sm text-muted-foreground">
-    { user ? user.username :"Admin"}
-  </span>
-</button>
-
-          {/* LOGOUT */}
-          <button
-            onClick={handleLogout}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
-            bg-blue-500/10 text-red-500 border border-blue-500/20 hover:bg-blue-500/20 transition"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
-
-          {/* MOBILE MENU BUTTON */}
-         <button
-  onClick={(e) => {
-    e.stopPropagation(); // ✅ VERY IMPORTANT
-    setOpen((prev) => !prev);
-  }}
-  className="lg:hidden p-2 rounded-lg hover:bg-accent"
->   
-            {open ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-      </div>
-
-      {/* ================= MOBILE MENU ================= */}
-{open && (
-  <>
-    {/* 🔥 SOLID BACKDROP */}
-    <div
-      onClick={() => setOpen(false)}
-      className="fixed inset-0 z-40 bg-black/70"
-    />
-
-    {/* 🔥 MENU PANEL */}
-    <div
-      id="mobile-menu"
-      onClick={(e) => e.stopPropagation()}
-      className="md:hidden absolute top-16 left-0 w-full z-50 px-4"
-    >
-      <div className="flex flex-col gap-2 bg-card border border-border rounded-xl p-3 shadow-xl backdrop-blur-md">
-
-        {/* NAV ITEMS */}
-        {navItems.map((item) => {
-          const active =
-            pathname === item.to || pathname.startsWith(item.to + "/");
-
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={() => setOpen(false)}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition
-
-                ${
-                  active
-                    ? "bg-blue-500/10 text-blue-500"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }
-              `}
+          {/* bottom actions */}
+          <div className="p-2 border-t border-border space-y-1 pb-3">
+            <button
+              onClick={() => { setMobileOpen(false); navigate({ to: "/admin/profile" }); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm hover:bg-muted transition-colors duration-150"
             >
-              <item.icon
-                size={18}
-                className={active ? "text-blue-500" : "text-gray-400"}
-              />
-              <span className="truncate">{item.label}</span>
-            </Link>
-          );
-        })}
+              <User size={16} className="text-muted-foreground" />
+              <span>My Profile</span>
+            </button>
 
-        {/* PROFILE */}
-        <div className="mt-auto pt-4 border-t border-border">
-        <button
-  onClick={() => {
-    setOpen(false);
-    navigate({ to: "/admin/profile" });
-  }}
-  className="
-    w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-muted
-    hover:bg-muted/70 transition
-  "
->
-  <div className="w-7 h-7 rounded-full bg-background flex items-center justify-center">
-    <Shield size={16} className="text-gray-400" />
-  </div>
-
-  <span className="text-sm text-muted-foreground truncate">
-    { user ? user.username :"Admin"}
-  </span>
-</button>
-
-          {/* LOGOUT */}
-          <button
-            onClick={() => {
-              setOpen(false);
-              handleLogout();
-            }}
-            className="
-              mt-3 w-full flex items-center gap-3 px-4 py-3 rounded-lg
-
-              bg-muted text-red-500
-              hover:bg-red-500/10 hover:text-red-600
-
-              transition
-            "
-          >
-            <div className="w-7 h-7 rounded-full bg-background flex items-center justify-center">
-              <LogOut size={16} className="text-red-500" />
-            </div>
-            <span className="text-sm font-medium">Logout</span>
-          </button>
+            <button
+              onClick={() => { setMobileOpen(false); handleLogout(); }}
+              disabled={logoutMutation.isPending}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 font-medium transition-colors duration-150 disabled:opacity-50"
+            >
+              <LogOut size={16} />
+              {logoutMutation.isPending ? "Logging out…" : "Logout"}
+            </button>
+          </div>
         </div>
-
       </div>
-    </div>
-  </>
-)}
-    </header>
+
+      {/* ══ TICKER ANIMATION ══════════════════════════════ */}
+      <style>{`
+        @keyframes ticker {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-ticker {
+          animation: ticker 28s linear infinite;
+        }
+        .animate-ticker:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+    </>
   );
 }
+
+/* ─── DROPDOWN ITEM ──────────────────────────────────────── */
+function DropdownItem({
+  icon, label, onClick,
+}: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="
+        w-full flex items-center gap-2.5 px-3 py-2 rounded-xl
+        text-sm text-foreground/80 hover:text-foreground
+        hover:bg-muted transition-colors duration-150 text-left
+      "
+    >
+      <span className="text-muted-foreground">{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+ 
