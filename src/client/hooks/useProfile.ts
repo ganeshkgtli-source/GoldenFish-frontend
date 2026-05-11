@@ -50,7 +50,6 @@ export const useMarketData = () => {
     queryKey: ["marketdata"],
 
     queryFn: async () => {
-
       console.log(
         "🔄 MARKET API CALLED:",
         new Date().toLocaleTimeString()
@@ -59,12 +58,16 @@ export const useMarketData = () => {
       return await getMarketData();
     },
 
-    refetchInterval: 5*60 *1000,
+    // Refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
 
+    // Continue interval in background
     refetchIntervalInBackground: true,
 
-    refetchOnWindowFocus: true,
+    // DO NOT refetch on tab switch
+    refetchOnWindowFocus: false,
 
-    staleTime: 0,
+    // Keep cache fresh for 5 mins
+    staleTime: 5 * 60 * 1000,
   });
 };
