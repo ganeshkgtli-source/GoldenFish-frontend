@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+// import api from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
  
 
@@ -17,11 +17,11 @@ export default function WatchlistSidebar() {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const res = await api.post("market/quotes/", {
-          securityIds: ["13", "25", "1333", "11536"],
-          // const res = none ;
-        });
-// const res = None ;
+        // const res = await api.post("market/quotes/", {
+        //   securityIds: ["13", "25", "1333", "11536"],
+        // });
+        // const res = none ;
+const res = None ;
         console.log("API RESPONSE:", res.data);
 
         if (res.data?.status !== "success") {

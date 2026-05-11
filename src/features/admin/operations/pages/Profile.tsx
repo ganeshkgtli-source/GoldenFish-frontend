@@ -67,7 +67,7 @@ export default function Profile() {
     if (res?.force_logout) {
       setTimeout(() => {
         localStorage.clear();
-        window.location.href = "/login";
+        window.location.href = "/signin";
       }, 3000);
     }
   };

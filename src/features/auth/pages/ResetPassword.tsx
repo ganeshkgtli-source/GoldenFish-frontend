@@ -67,7 +67,7 @@ export default function ResetPassword() {
       );
 
       setTimeout(() => {
-        navigate({ to: "/login" });
+        navigate({ to: "/signin" });
       }, 2000);
     } catch (err: any) {
       const msg =
@@ -128,7 +128,7 @@ export default function ResetPassword() {
               {(error.toLowerCase().includes("expired") ||
                 error.toLowerCase().includes("invalid")) && (
                 <button
-                  onClick={() => navigate({ to: "/login" })}
+                  onClick={() => navigate({ to: "/signin" })}
                   className="text-red-500 underline text-sm"
                 >
                   Request new reset link

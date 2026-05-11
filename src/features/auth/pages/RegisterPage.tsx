@@ -81,7 +81,7 @@ useEffect(() => {
     // ✅ SUCCESS ONLY HERE
     sessionStorage.removeItem("verify_email");
 
-    navigate({ to: "/login" });
+    navigate({ to: "/signin" });
 
     return { success: true };
 

@@ -79,7 +79,7 @@ export const hasRole = (allowed: Role[]): boolean => {
 
 export const requireAuth = () => {
   const { user } = useAuthStore.getState();
-  if (!user) throw redirect({ to: "/login" });
+  if (!user) throw redirect({ to: "/signin" });
 };
 
 export const requireGuest = () => {
@@ -94,13 +94,13 @@ export const requireRole = (allowed: Role[]) => {
 
 export const requireAdmin = () => {
   const { user } = useAuthStore.getState();
-  if (!user) throw redirect({ to: "/login" });
+  if (!user) throw redirect({ to: "/signin" });
   if (user.role !== "admin" && user.role !== "super_admin") throw redirect({ to: "/" });
 };
 
 export const requireSuperAdmin = () => {
   const { user } = useAuthStore.getState();
-  if (!user) throw redirect({ to: "/login" });
+  if (!user) throw redirect({ to: "/signin" });
   if (user.role !== "super_admin") throw redirect({ to: "/" });
 };
 
@@ -113,7 +113,7 @@ export const getUserRole = (): Role | null =>
 // api.ts no longer registers this — auth.ts is the single source
 window.addEventListener("storage", (e) => {
   if (e.key === "access" && !e.newValue) {
-    window.location.replace("/login");
+    window.location.replace("/signin");
   }
 });
 
@@ -210,7 +210,7 @@ window.addEventListener("storage", (e) => {
 
 //   // ❌ No token → logout
 //   if (!token || !isTokenValid(token)) {
-//     throw redirect({ to: "/login" });
+//     throw redirect({ to: "/signin" });
 //   }
 
 //   // ✅ Token exists → allow (user will be restored)
@@ -221,7 +221,7 @@ window.addEventListener("storage", (e) => {
 // //   const { user } = useAuthStore.getState();
 
 // //   if (!user) {
-// //     throw redirect({ to: "/login" });
+// //     throw redirect({ to: "/signin" });
 // //   }
 // // };
 
@@ -245,7 +245,7 @@ window.addEventListener("storage", (e) => {
 //   const { user } = useAuthStore.getState();
 
 //   if (!user) {
-//     throw redirect({ to: "/login" });
+//     throw redirect({ to: "/signin" });
 //   }
 
 //   if (user.role !== "admin" && user.role !== "super_admin") {
@@ -257,7 +257,7 @@ window.addEventListener("storage", (e) => {
 //   const { user } = useAuthStore.getState();
 
 //   if (!user) {
-//     throw redirect({ to: "/login" });
+//     throw redirect({ to: "/signin" });
 //   }
 
 //   if (user.role !== "super_admin") {
@@ -274,6 +274,6 @@ window.addEventListener("storage", (e) => {
 
 // window.addEventListener("storage", (e) => {
 //   if (e.key === "access" && !e.newValue) {
-//     window.location.replace("/login");
+//     window.location.replace("/signin");
 //   }
 // });

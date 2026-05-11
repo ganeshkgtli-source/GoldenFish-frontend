@@ -1,9 +1,34 @@
 import api from "@/lib/api";
 
+export type ProfileResponse = {
+
+  user: {
+
+    username: string;
+
+    email: string;
+
+    phone: string;
+
+    client_id: string;
+
+    api_key: string;
+
+    api_secret: string;
+
+    is_email_verified: boolean;
+  };
+
+  dhan_client_ucc: string;
+};
 /* ================= GET PROFILE ================= */
-export const getProfile = async () => {
-  const res = await api.get("profile/");
-  return res.data;
+export const getProfile = async (): Promise<ProfileResponse> => {
+
+  const res = await api.get(
+    "profile/"
+  );
+
+  return res.data.data;
 };
 
 /* ================= UPDATE API ================= */

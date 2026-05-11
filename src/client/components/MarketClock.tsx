@@ -147,11 +147,11 @@ export default function MarketClock() {
       )}
 
       {/* TIMINGS */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      {/* <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span>Open 09:15</span>
         <span className="opacity-40">|</span>
         <span>Close 03:30</span>
-      </div>
+      </div> */}
 
       {/* PROGRESS */}
       <div>

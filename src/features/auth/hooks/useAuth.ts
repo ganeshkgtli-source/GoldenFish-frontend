@@ -15,6 +15,7 @@ import {
   type RegisterPayload,
   type VerifyOtpPayload,
   checkUserExists,
+  submitKycVerification
 } from "../api/authApi";
 
 import {
@@ -51,12 +52,15 @@ export const useLogin = () => {
       }
 
       const role = normalizeRole(data.role);
-
+      
       sessionService.start();
+      
 
       setUser({
         username: data.username ?? "",
         role,
+        email: data.email ?? "",
+        is_kyc_verified: data.is_kyc_verified ?? false,
       });
 
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -150,7 +154,7 @@ export const useLogout = () => {
       queryClient.clear();      // clear React Query cache
 
       // 🔥 HARD REDIRECT (ensures full reset)
-      window.location.href = "/login";
+      window.location.href = "/signin";
     },
   });
 };
@@ -206,6 +210,7 @@ export const useProfile = () => {
       username: query.data.username ?? "",
       email: query.data.email,
       role: currentUser?.role ?? "user",
+      is_kyc_verified: false
     });
   }, [query.data, setUser]);
 
@@ -218,182 +223,45 @@ export const useCheckUserExists = () => {
   });
 };
 
-// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// import {
-//   loginUser,
-//   registerUser,
-//   verifyOtp,
-//   resendOtp,
-//   forgotPassword,
-//   resetPassword,
-//   logoutUser,
-//   getProfile,
- 
- 
-// } from "../api/authApi";
-// import type { UserProfile } from "../api/authApi";
-// import { normalizeRole, roleService, sessionService, tokenService } from "@/lib/auth";
-// import { useAuthStore } from "@/store/authStore";
 
-// /* ================= LOGIN ================= */
-// export const useLogin = () => {
-//   const queryClient = useQueryClient();
+/* ================= KYC VERIFICATION ================= */
 
-//   return useMutation({
-//     mutationFn: loginUser,
+export const useKycVerification = () => {
 
-//     retry: 1,
+  const setUser =
+    useAuthStore((s) => s.setUser);
 
-//     onSuccess: (data) => {
-//       // ✅ store tokens
-//       tokenService.set(data.tokens.access, data.tokens.refresh);
+  const currentUser =
+    useAuthStore((s) => s.user);
 
-//       // ✅ normalize role
-//       const role = normalizeRole(data.role);
+  return useMutation({
 
-//       // ❌ optional (remove if using Zustand everywhere)
-//       // roleService.set(role);
+    mutationFn: (
+      formData: FormData
+    ) =>
+      submitKycVerification(
+        formData
+      ),
 
-//       // ✅ start session
-//       sessionService.start();
+    retry: 1,
 
-//       // ✅ store user in Zustand
-//       useAuthStore.getState().setUser({
-//         username: data.username,
-//         role: role,
-//       });
+    onSuccess: (data) => {
 
-//       // ✅ refresh profile
-//       queryClient.invalidateQueries({ queryKey: ["profile"] });
-//     },
-//   });
-// };
+      // =========================
+      // UPDATE AUTH STORE
+      // =========================
+      if (
+        currentUser &&
+        data?.is_kyc_verified
+      ) {
 
-// /* ================= REGISTER ================= */
-// // export const useRegister = () => {
-// //   return useMutation({
-// //     mutationFn: registerUser,
-// //     retry: 1,
-// //   });
-// // };
-// export const useRegister = () => {
-//   return useMutation({
-//     mutationFn: registerUser,
-//     retry: 1,
+        setUser({
 
-//     onSuccess: (data) => {
-//       // normalize email here (centralized)
-//       return {
-//         email: data.email?.trim().toLowerCase(),
-//       };
-//     },
-//   });
-// };
-// /* ================= VERIFY OTP ================= */
-// // export const useVerifyOtp = () => {
-// //   return useMutation({
-// //     mutationFn: ({
-// //       email,
-// //       otp,
-// //     }: {
-// //       email: string;
-// //       otp: string;
-// //     }) => verifyOtp(email, otp),
+          ...currentUser,
 
-// //     retry: 1,
-// //   });
-// // };
-//  export const useVerifyOtp = () => {
-//   return useMutation({
-//     mutationFn: ({
-//       email,
-//       otp,
-//     }: {
-//       email: string;
-//       otp: string;
-//     }) => verifyOtp(email, otp),
-
-//     retry: 1,
-//   });
-// };
-
-// /* ================= RESEND OTP ================= */
-// export const useResendOtp = () => {
-//   return useMutation({
-//     mutationFn: resendOtp,
-
-//     retry: false,
-
-//     // 🔥 useful for rate limit UI
-//     onError: (err: any) => {
-//       if (err?.response?.data?.remaining_time) {
-//         console.warn("Retry after:", err.response.data.remaining_time);
-//       }
-//     },
-//   });
-// };
-
-// /* ================= FORGOT PASSWORD ================= */
-// export const useForgotPassword = () => {
-//   return useMutation({
-//     mutationFn: forgotPassword,
-//     retry: 1,
-//   });
-// };
-
-// /* ================= RESET PASSWORD ================= */
-// export const useResetPassword = () => {
-//   return useMutation({
-//     mutationFn: resetPassword,
-//     retry: 1,
-//   });
-// };
-
-// /* ================= LOGOUT ================= */
-// export const useLogout = () => {
-//   const queryClient = useQueryClient();
-
-//   return useMutation({
-//     mutationFn: logoutUser,
-
-//     onSuccess: () => {
-//       // ✅ clear all cached data
-//   useAuthStore.getState().clearUser();    },
-
-//     onSettled: () => {
-//       // fallback (even if API fails)
-//       queryClient.clear();
-//     },
-//   });
-// };
-
-// /* ================= PROFILE ================= */
-// /* ================= PROFILE ================= */
-// import { useEffect } from "react";
-
-// export const useProfile = () => {
-//   const query = useQuery<UserProfile>({
-//     queryKey: ["profile"],
-//     queryFn: getProfile,
-
-//     enabled: !!tokenService.getAccess(),
-
-//     staleTime: 1000 * 60 * 5,
-//     retry: 1,
-//     refetchOnWindowFocus: false,
-//     refetchOnReconnect: true,
-//   });
-
-//   // ✅ React Query v5 replacement for onSuccess
-//   useEffect(() => {
-//     if (query.data) {
-//       useAuthStore.getState().setUser({
-//         username: query.data.username ?? "",
-//         email: query.data.email,
-//       });
-//     }
-//   }, [query.data]);
-
-//   return query;
-// };
- 
+          is_kyc_verified: true,
+        });
+      }
+    },
+  });
+};

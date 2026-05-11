@@ -1,6 +1,8 @@
 import {
   FileText, Moon,Sun,Menu,X,LayoutDashboard,LogOut,Briefcase,BarChart3,Wallet,User,// TrendingUp,
   ChevronDown,
+ BrainCircuit, PlusSquare, ClipboardList, Settings2, Activity, ShieldCheck, CandlestickChart,
+  AlertTriangle,
 } from "lucide-react";
 
 import { useTheme } from "@/context/ThemeContext";
@@ -11,14 +13,20 @@ import { useLogout } from "@/features/auth/hooks/useAuth";
 
 /* ─── NAV CONFIG ─────────────────────────────────────────── */
 
-const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
-  { label: "Portfolio",  icon: Briefcase,       to: "/portfolio"   },
-  { label: "Positions",  icon: BarChart3,       to: "/positions"  },
-  { label: "Orders",     icon: FileText,        to: "/orders"      },
-  { label: "Money",      icon: Wallet,          to: "/money"       },
-] as const;
-
+ 
+export const NAV_ITEMS = [{ label: "Dashboard", icon: LayoutDashboard, to: "/super-admin/dashboard" },
+     { label: "Strategies", icon: BrainCircuit, to: "/super-admin/strategies" },
+      { label: "Create Strategy", icon: PlusSquare, to: "/super-admin/createstrategies" },
+       { label: "Backtesting", icon: BarChart3, to: "/super-admin/backtesting" }, 
+       { label: "Live Trades", icon: CandlestickChart, to: "/super-admin/live-trades" }, 
+       { label: "Execution Monitor", icon: Activity, to: "/super-admin/execution-monitor" },
+        { label: "Risk Management", icon: ShieldCheck, to: "/super-admin/risk-management" }, 
+        { label: "Strategy Settings", icon: Settings2, to: "/super-admin/strategy-settings" },
+        //  { label: "Order Logs", icon: ClipboardList, to: "/super-admin/order-logs" }, 
+        //  { label: "Error Logs", icon: AlertTriangle, to: "/super-admin/error-logs" }
+        
+        ] as const;
+  
 /* ─── TICKER DATA (static dummy — swap with real feed) ─── */
 // const TICKER = [
 //   { sym: "NIFTY",     val: "22,419.95", chg: "+0.42%" , up: true  },
@@ -31,7 +39,7 @@ const NAV_ITEMS = [
 /* ════════════════════════════════════════════════════════════
    NAVBAR
 ═══════════════════════════════════════════════════════════ */
-export default function Navbar() {
+export default function SANavbar() {
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen]   = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -120,7 +128,7 @@ export default function Navbar() {
 
           {/* ── LOGO ─────────────────────────────────────── */}
           <button
-            onClick={() => navigate({ to: "/dashboard" })}
+            onClick={() => navigate({ to: "/super-admin/dashboard" })}
             className="flex items-center gap-2.5 flex-shrink-0 group"
             aria-label="Go to dashboard"
           >
@@ -244,7 +252,8 @@ export default function Navbar() {
                     <DropdownItem
                       icon={<User size={14} />}
                       label="My Profile"
-                      onClick={() => { setProfileOpen(false); navigate({ to: "/profile" }); }}
+                        // onClick={() => navigate({ to: "/admin/profile" })}
+                      onClick={() => { setProfileOpen(false); navigate({ to: "/admin/profile" }); }}
                     />
                     {/* <DropdownItem
                       icon={<TrendingUp size={14} />}
@@ -370,7 +379,7 @@ onClick={(e) => {
           {/* bottom actions */}
           <div className="p-2 border-t border-border space-y-1 pb-3">
             <button
-              onClick={() => { setMobileOpen(false); navigate({ to: "/profile" }); }}
+              onClick={() => { setMobileOpen(false); navigate({ to: "/admin/profile" }); }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm hover:bg-muted transition-colors duration-150"
             >
               <User size={16} className="text-muted-foreground" />

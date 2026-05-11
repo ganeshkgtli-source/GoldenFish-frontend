@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   Eye,
   EyeOff,
-} from "lucide-react";
+  Copy,
+   } from "lucide-react";
 // import api from "@/lib/api";
 import OtpVerification from "./OtpVerification";
 interface Props {
@@ -87,7 +88,8 @@ const [form, setForm] = useState<FormState>({
     terms_accepted: false,
     account_type: null,
   });
-
+const [copied, setCopied] =
+  useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -114,7 +116,34 @@ useEffect(() => {
     }));
   }
 }, []);
+const callbackUrl =
+  "http://127.0.0.1:8000/api/dhan/callback/";
 
+const handleCopyCallback =
+  async () => {
+
+    try {
+
+      await navigator.clipboard.writeText(
+        callbackUrl
+      );
+
+      setCopied(true);
+
+      setTimeout(() => {
+
+        setCopied(false);
+
+      }, 2000);
+
+    } catch (err) {
+
+      console.error(
+        "Copy failed",
+        err
+      );
+    }
+};
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     //     console.log(name, value, type, checked);
@@ -384,63 +413,7 @@ if (res?.success !== false) {
     setSubmitting(false);
   }
 };
-  // const handleSubmit = async () => {
-  //   if (loading || submitting) return;
-
-  //   if (!validateStep()) return;
-  //   setSubmitting(true);
-
-  //   if (!accountType) {
-  //     setError("Please select account type");
-  //     return;
-  //   }
-
-  //   try {
-  //     setError("");
-  //     setSuccess("");
-
-  //     const { confirm_password, ...payload } = {
-  //       ...form,
-  //       username: form.username.trim(),
-  //       email: form.email.trim(),
-  //       phone: form.phone.trim(),
-  //     };
-
-  //     const cleanedPayload =
-  //       accountType === "AP"
-  //         ? {
-  //             ...payload,
-  //             api_key: "",
-  //             api_secret: "",
-  //           }
-  //         : payload;
-  //     // console.log("Submitting registration with payload:", cleanedPayload);
-  //     await onSubmit({
-  //       ...cleanedPayload,
-  //       phone: payload.phone.replace(/^\+91/, ""),
-  //       account_type: accountType,
-  //     });
-
-  //     setShowOtp(true);
-  //     // setSuccess("OTP sent to your email 📩");
-  //   } catch (err: any) {
-  //     console.log("❌ REGISTER ERROR:", err?.response?.data);
-
-  //     // setError(
-  //     //   err?.response?.data?.message ||
-  //     //     err?.response?.data?.detail ||
-  //     //     "Registration failed",
-  //     // );
-  //     setError(
-  //       err?.response?.data?.message ||
-  //         err?.response?.data?.error ||
-  //         err?.message ||
-  //         "Registration failed",
-  //     );
-  //   } finally {
-  //     setSubmitting(false); // ✅ ALWAYS reset
-  //   }
-  // };
+    
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
       <div className="w-full max-w-3xl">
@@ -820,21 +793,25 @@ if (res?.success !== false) {
                 )}
 
                 {/* STEP 3 */}
-                {currentStep === 3 && (
+  {currentStep === 3 && (
   <div className="space-y-5">
+
     <div className="mb-6">
+
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+
         {form.account_type === "AP"
           ? "Client ID Setup"
           : "API Configuration"}
       </h2>
 
       <p className="text-sm text-gray-600 dark:text-gray-400">
+
         Connect your Dhan trading account
       </p>
     </div>
 
-    {/* ALWAYS SHOW */}
+    {/* CLIENT ID */}
     <Field
       label="Client ID"
       name="client_id"
@@ -843,9 +820,169 @@ if (res?.success !== false) {
       onChange={handleChange}
     />
 
+    {/* REDIRECT URL */}
+<div className="space-y-3">
+
+  {/* LABEL */}
+  <div className="flex items-center justify-between">
+
+    <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+
+      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+
+      Dhan Redirect URL
+    </label>
+
+    <span className="text-[10px] px-2 py-1 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-medium border border-red-200 dark:border-red-500/20">
+
+      REQUIRED
+    </span>
+  </div>
+
+  {/* URL CARD */}
+  <div className="
+    relative
+    overflow-hidden
+    rounded-2xl
+    border
+    border-red-200/60
+    dark:border-red-500/20
+    bg-gradient-to-br
+    from-white
+    to-red-50/80
+    dark:from-gray-900
+    dark:to-red-950/10
+    shadow-lg
+    shadow-red-500/5
+  ">
+
+    {/* GLOW EFFECT */}
+    <div className="
+      absolute
+      top-0
+      right-0
+      w-32
+      h-32
+      bg-red-500/10
+      blur-3xl
+      rounded-full
+    " />
+
+    <div className="relative p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+
+      {/* URL INPUT */}
+      <div className="
+        flex-1
+        h-[42px]
+        px-4
+        rounded-xl
+        border
+        border-gray-200
+        dark:border-gray-700
+        bg-white/80
+        dark:bg-gray-800/80
+        backdrop-blur-sm
+        flex
+        items-center
+        overflow-x-auto
+      ">
+
+        <span className="
+          text-[13px]
+          font-medium
+          text-gray-700
+          dark:text-gray-300
+          whitespace-nowrap
+        ">
+
+          {callbackUrl}
+        </span>
+      </div>
+
+      {/* COPY BUTTON */}
+      <button
+        type="button"
+        onClick={handleCopyCallback}
+        className="
+          h-[42px]
+          min-w-[110px]
+          px-4
+          rounded-xl
+          bg-gradient-to-r
+          from-red-600
+          to-red-700
+          hover:from-red-700
+          hover:to-red-800
+          text-white
+          transition-all
+          duration-300
+          flex
+          items-center
+          justify-center
+          gap-2
+          font-medium
+          shadow-lg
+          shadow-red-500/20
+          hover:scale-[1.02]
+          active:scale-[0.98]
+        "
+      >
+
+        {copied ? (
+          <>
+            <Check size={15} />
+            Copied
+          </>
+        ) : (
+          <>
+            <Copy size={15} />
+            Copy URL
+          </>
+        )}
+      </button>
+    </div>
+  </div>
+
+  {/* INFO CARD */}
+  <div className="
+    rounded-xl
+    border
+    border-blue-200/60
+    dark:border-blue-500/20
+    bg-blue-50/70
+    dark:bg-blue-500/5
+    px-4
+    py-3
+  ">
+
+    <p className="
+      text-[13px]
+      leading-relaxed
+      text-blue-800
+      dark:text-blue-300
+    ">
+
+      Create a new{" "}
+
+      <span className="font-semibold">
+        Dhan API Credential
+      </span>
+
+      {" "}and paste this redirect URL inside your{" "}
+
+      <span className="font-semibold">
+        Dhan Developer App Settings
+      </span>
+
+      {" "}to enable secure authentication and callback verification.
+    </p>
+  </div>
+</div>
+
     {/* ONLY FOR INDIVIDUAL ACCOUNT */}
     {form.account_type === "INDIVIDUAL" && (
       <>
+
         <Field
           label="API Key"
           name="api_key"
@@ -865,7 +1002,9 @@ if (res?.success !== false) {
       </>
     )}
 
+    {/* TERMS */}
     <label className="flex items-start gap-3">
+
       <input
         type="checkbox"
         name="terms_accepted"
@@ -875,7 +1014,9 @@ if (res?.success !== false) {
       />
 
       <span className="text-sm text-gray-600 dark:text-gray-400">
+
         I agree to the{" "}
+
         <a
           href="/terms-and-conditions"
           target="_blank"
@@ -884,7 +1025,9 @@ if (res?.success !== false) {
         >
           Terms & Conditions
         </a>{" "}
+
         and{" "}
+
         <a
           href="/privacy-policy"
           target="_blank"
@@ -983,28 +1126,7 @@ email={form.email.trim().toLowerCase()}
 
 await onVerifyOtp(otp);
               }}
-              // onResend={async () => {
-              //   try {
-              //     setError("");
-              //     setSuccess("");
-
-              //     if (!onResend) {
-              //       return { message: "No handler" }; // ✅ never return null
-              //     }
-
-              //     const res = await onResend();
-
-              //     return res ?? { message: "OTP sent" }; // ✅ fallback object
-              //   } catch (err: any) {
-              //     setError(
-              //       err?.response?.data?.message ||
-              //         err?.response?.data?.detail ||
-              //         "Failed to resend OTP",
-              //     );
-
-              //     throw err; // ✅ keep error flow
-              //   }
-              // }}
+              
               onResend={async () => {
   try {
     setError("");
@@ -1031,7 +1153,7 @@ await onVerifyOtp(otp);
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
-              <a href="/login" className="text-red-600 font-medium">
+              <a href="/signin" className="text-red-600 font-medium">
                 Sign in
               </a>
             </p>
@@ -1103,4 +1225,4 @@ function Field({
   );
 }
 
-// export default Field;
+ 

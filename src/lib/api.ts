@@ -14,6 +14,8 @@ if (!BASE_URL) throw new Error("VITE_API_URL is missing");
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
+    withCredentials: true,
+
   headers: { "Content-Type": "application/json" },
 });
 
@@ -21,7 +23,7 @@ const api = axios.create({
 
 const PUBLIC_ROUTES = new Set([
   "/register/",
-  "/login/",
+  "/signin/",
   "/verify-email/",
   "/resend-email-otp/",
   "/token/refresh/",
@@ -78,7 +80,7 @@ export const logout = () => {
   stopRefresh();
   tokenService.clear();
   sessionStorage.clear();
-  window.location.replace("/login");
+  window.location.replace("/signin");
 };
 
 /* ================= REFRESH ================= */
@@ -91,7 +93,9 @@ export const refreshAccessToken = async (): Promise<boolean> => {
       const refresh = tokenService.getRefresh();
       if (!refresh) throw new Error("No refresh token");
 
-      const res = await axios.post(`${BASE_URL}token/refresh/`, { refresh });
+      const res = await axios.post(`${BASE_URL}token/refresh/`, { refresh }, {
+    withCredentials: true,
+  });
       tokenService.set(res.data.access, res.data.refresh);
       scheduleRefresh(res.data.access);
       return true;
@@ -190,7 +194,7 @@ export default api;
 
 // const PUBLIC_ROUTES = [
 //   "/register/",
-//   "/login/",
+//   "/signin/",
 //   "/verify-email/",
 //   "/resend-email-otp/",
 //   "/token/refresh/",
@@ -262,7 +266,7 @@ export default api;
 // tokenService.clear();
 // sessionStorage.clear();
 
-// window.location.replace("/login");
+// window.location.replace("/signin");
 // };
 
 // /* ================= REFRESH ================= */
@@ -432,7 +436,7 @@ export default api;
 
 // window.addEventListener("storage", (e) => {
 // if (e.key === "access" && !e.newValue) {
-// window.location.replace("/login");
+// window.location.replace("/signin");
 // }
 // });
 

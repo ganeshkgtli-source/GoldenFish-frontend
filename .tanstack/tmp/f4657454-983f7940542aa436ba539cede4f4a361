@@ -16,7 +16,6 @@ import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MoneyRouteImport } from './routes/money'
-import { Route as Kyc_verificationRouteImport } from './routes/kyc_verification'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
@@ -63,11 +62,6 @@ const OrdersRoute = OrdersRouteImport.update({
 const MoneyRoute = MoneyRouteImport.update({
   id: '/money',
   path: '/money',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Kyc_verificationRoute = Kyc_verificationRouteImport.update({
-  id: '/kyc_verification',
-  path: '/kyc_verification',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -135,7 +129,6 @@ const AdminClientIdRoute = AdminClientIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/kyc_verification': typeof Kyc_verificationRoute
   '/money': typeof MoneyRoute
   '/orders': typeof OrdersRoute
   '/portfolio': typeof PortfolioRoute
@@ -157,7 +150,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/kyc_verification': typeof Kyc_verificationRoute
   '/money': typeof MoneyRoute
   '/orders': typeof OrdersRoute
   '/portfolio': typeof PortfolioRoute
@@ -180,7 +172,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/kyc_verification': typeof Kyc_verificationRoute
   '/money': typeof MoneyRoute
   '/orders': typeof OrdersRoute
   '/portfolio': typeof PortfolioRoute
@@ -204,7 +195,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/kyc_verification'
     | '/money'
     | '/orders'
     | '/portfolio'
@@ -226,7 +216,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
-    | '/kyc_verification'
     | '/money'
     | '/orders'
     | '/portfolio'
@@ -248,7 +237,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/kyc_verification'
     | '/money'
     | '/orders'
     | '/portfolio'
@@ -271,7 +259,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  Kyc_verificationRoute: typeof Kyc_verificationRoute
   MoneyRoute: typeof MoneyRoute
   OrdersRoute: typeof OrdersRoute
   PortfolioRoute: typeof PortfolioRoute
@@ -340,13 +327,6 @@ declare module '@tanstack/react-router' {
       path: '/money'
       fullPath: '/money'
       preLoaderRoute: typeof MoneyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kyc_verification': {
-      id: '/kyc_verification'
-      path: '/kyc_verification'
-      fullPath: '/kyc_verification'
-      preLoaderRoute: typeof Kyc_verificationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -439,7 +419,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  Kyc_verificationRoute: Kyc_verificationRoute,
   MoneyRoute: MoneyRoute,
   OrdersRoute: OrdersRoute,
   PortfolioRoute: PortfolioRoute,
