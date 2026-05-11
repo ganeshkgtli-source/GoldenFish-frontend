@@ -21,6 +21,8 @@ export type ProfileResponse = {
 
   dhan_client_ucc: string;
 };
+ 
+
 /* ================= GET PROFILE ================= */
 export const getProfile = async (): Promise<ProfileResponse> => {
 
@@ -66,3 +68,27 @@ export const verifyOtpPassword = async (data: {
   const res = await api.post("profile/verify-otp-password/", data);
   return res.data;
 };
+
+
+ 
+
+export type MarketSymbol = {
+  security_id: string;
+
+  SYMBOL_NAME: string;
+
+};
+
+export type MarketDataResponse = {
+  data: MarketSymbol[];
+};
+
+export const getMarketData =
+  async (): Promise<MarketDataResponse> => {
+
+    const res = await api.get(
+      "marketdata/"
+    );
+console.log("MARKET DATA RESPONSE:", res.data);
+    return res.data;
+  };

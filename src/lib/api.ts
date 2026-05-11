@@ -13,7 +13,7 @@ if (!BASE_URL) throw new Error("VITE_API_URL is missing");
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 60000,
     withCredentials: true,
 
   headers: { "Content-Type": "application/json" },

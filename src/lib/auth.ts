@@ -71,9 +71,11 @@ export const isAuthenticated = (): boolean => {
 /* ================= ROLE CHECK ================= */
 
 export const hasRole = (allowed: Role[]): boolean => {
-  const role = useAuthStore.getState().user?.role;
-  return !!role && allowed.includes(role);
+  const roleStr = useAuthStore.getState().user?.role;
+  const role = normalizeRole(roleStr);
+  return !!roleStr && allowed.includes(role);
 };
+
 
 /* ================= ROUTE GUARDS ================= */
 
@@ -88,9 +90,11 @@ export const requireGuest = () => {
 };
 
 export const requireRole = (allowed: Role[]) => {
-  const role = useAuthStore.getState().user?.role;
-  if (!role || !allowed.includes(role)) throw redirect({ to: "/" });
+  const roleStr = useAuthStore.getState().user?.role;
+  const role = normalizeRole(roleStr);
+  if (!roleStr || !allowed.includes(role)) throw redirect({ to: "/" });
 };
+
 
 export const requireAdmin = () => {
   const { user } = useAuthStore.getState();
@@ -106,8 +110,11 @@ export const requireSuperAdmin = () => {
 
 /* ================= HELPERS ================= */
 
-export const getUserRole = (): Role | null =>
-  useAuthStore.getState().user?.role ?? null;
+export const getUserRole = (): Role | null => {
+  const roleStr = useAuthStore.getState().user?.role;
+  return roleStr ? normalizeRole(roleStr) : null;
+};
+
 
 // FIX: cross-tab logout listener kept in ONE place only (removed from api.ts duplicate)
 // api.ts no longer registers this — auth.ts is the single source

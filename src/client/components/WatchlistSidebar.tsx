@@ -1,58 +1,47 @@
-// import api from "@/lib/api";
-import { useEffect, useMemo, useState } from "react";
  
+import { useEffect, useMemo, useState } from "react";
+ import {
+  useMarketData,
+} from "@/client/hooks/useProfile";
 
 type Stock = {
   name: string;
   price: number;
   change: number;
+    security_id: string;
   flash?: "up" | "down" | null;
 };
 
 export default function WatchlistSidebar() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [query, setQuery] = useState("");
-
+const {
+  data: marketData,
+  // isLoading,
+  // error,
+} = useMarketData();
   /* ================= INITIAL API LOAD ================= */
-  useEffect(() => {
-    const fetchInitial = async () => {
-      try {
-        // const res = await api.post("market/quotes/", {
-        //   securityIds: ["13", "25", "1333", "11536"],
-        // });
-        // const res = none ;
-const res = None ;
-        console.log("API RESPONSE:", res.data);
+ useEffect(() => {
 
-        if (res.data?.status !== "success") {
-          throw new Error("API failed");
-        }
+  if (!marketData?.data)
+    return;
 
-        const formatted = Object.values(res.data?.data || {}).map((s: any) => ({
-          name: s.tradingSymbol?.toUpperCase(),
-          price: s.lastTradedPrice,
-          change: s.percentChange,
-        }));
+  const formatted =
+    marketData.data.map(
+      (s: any) => ({
+        name:
+          s.SYMBOL_NAME?.toUpperCase(),
+         security_id:
+        s.security_id,
+        price: 0,
 
-        setStocks(formatted);
-      } catch (err: any) {
-        console.log("API ERROR:", err?.response?.data || err.message);
+        change: 0,
+      })
+    );
 
-        // 🔥 fallback data
-        setStocks([
-          { name: "RELIANCE", price: 2850, change: 0 },
-          { name: "TCS", price: 3420, change: 0 },
-          { name: "NIFTY", price: 24227, change: 0 },
-                    { name: "BANKNIFTY", price: 24227, change: 0 },
-                     { name: "BANKNIFTY", price: 24227, change: 0 },
- 
+  setStocks(formatted);
 
-        ]);
-      }
-    };
-
-    fetchInitial();
-  }, []);
+}, [marketData]);
 
   /* ================= LIVE DATA (MOCK / WS TOGGLE) ================= */
 
@@ -206,7 +195,7 @@ const res = None ;
                 {s.name}
               </span>
               <span className="text-[10px] text-muted-foreground">
-                NSE
+               {s.security_id}
               </span>
             </div>
 

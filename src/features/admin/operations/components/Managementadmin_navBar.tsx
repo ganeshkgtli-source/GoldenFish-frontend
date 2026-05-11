@@ -1,5 +1,5 @@
 import {
-  FileText, Moon,Sun,Menu,X,LayoutDashboard,LogOut,Briefcase,BarChart3,Wallet,User,// TrendingUp,
+  FileText, Moon,Sun,Menu,X,LayoutDashboard,LogOut,User,// TrendingUp,
   ChevronDown,
   Users,
   UserPlus,
