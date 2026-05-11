@@ -27,7 +27,7 @@ export type ProfileResponse = {
 export const getProfile = async (): Promise<ProfileResponse> => {
 
   const res = await api.get(
-    "profile/"
+    "/profile/"
   );
 
   return res.data.data;
@@ -39,7 +39,7 @@ export const updateApiCredentials = async (data: {
   api_secret: string;
   password: string;
 }) => {
-  const res = await api.post("profile/update-credentials/", data);
+  const res = await api.post("/profile/update-credentials/", data);
   return res.data;
 };
 
@@ -49,13 +49,13 @@ export const changePassword = async (data: {
   new_password: string;
   confirm_password: string;
 }) => {
-  const res = await api.post("profile/change-password/", data);
+  const res = await api.post("/profile/change-password/", data);
   return res.data;
 };
 
 /* ================= SEND OTP ================= */
 export const sendOtp = async () => {
-  const res = await api.post("profile/send-otp/");
+  const res = await api.post("/profile/send-otp/");
   return res.data;
 };
 
@@ -65,7 +65,7 @@ export const verifyOtpPassword = async (data: {
   new_password: string;
   confirm_password: string;
 }) => {
-  const res = await api.post("profile/verify-otp-password/", data);
+  const res = await api.post("/profile/verify-otp-password/", data);
   return res.data;
 };
 
@@ -87,7 +87,7 @@ export const getMarketData =
   async (): Promise<MarketDataResponse> => {
 
     const res = await api.get(
-      "marketdata/"
+      "/marketdata/"
     );
 console.log("MARKET DATA RESPONSE:", res.data);
     return res.data;

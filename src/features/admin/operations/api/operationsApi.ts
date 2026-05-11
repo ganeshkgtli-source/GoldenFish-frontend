@@ -36,12 +36,12 @@ export const operationsApi = {
   changePassword: async (
     payload: ChangePasswordPayload
   ): Promise<ApiResponse> => {
-    const { data } = await api.post("profile/change-password/", payload);
+    const { data } = await api.post("/profile/change-password/", payload);
     return data;
   },
 
   sendOtp: async (): Promise<ApiResponse> => {
-    const { data } = await api.post("profile/send-otp/");
+    const { data } = await api.post("/profile/send-otp/");
     return data;
   },
 
@@ -51,7 +51,7 @@ verifyOtpPassword: async (
   if (!payload.otp) throw new Error("OTP is required");
   
   const { data } = await api.post(
-    "profile/verify-otp-password/",
+    "/profile/verify-otp-password/",
     payload
   );
   return data;
