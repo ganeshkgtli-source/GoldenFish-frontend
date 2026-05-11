@@ -1,4 +1,4 @@
-import React from "react";
+
 
 import {
   GripVertical,
@@ -31,9 +31,7 @@ type CondRowProps = {
     p: Partial<Side>
   ) => void;
 
-  onUpdRight: (
-    p: Partial<Side>
-  ) => void;
+
 
   onUpdOp: (
     op: string
@@ -63,7 +61,7 @@ export default function CondRow({
   activeInds,
 
   onUpdLeft,
-  onUpdRight,
+
 
   onUpdOp,
   onUpdOpType,

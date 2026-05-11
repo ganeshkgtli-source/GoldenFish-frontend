@@ -1,8 +1,8 @@
 import {
-  FileText, Moon,Sun,Menu,X,LayoutDashboard,LogOut,Briefcase,BarChart3,Wallet,User,// TrendingUp,
+  Moon,Sun,Menu,X,LayoutDashboard,LogOut,User,
   ChevronDown,
- BrainCircuit, PlusSquare, ClipboardList, Settings2, Activity, ShieldCheck, CandlestickChart,
-  AlertTriangle,
+  BrainCircuit, PlusSquare, BarChart3, Settings2, Activity, ShieldCheck, CandlestickChart,
+
 } from "lucide-react";
 
 import { useTheme } from "@/context/ThemeContext";
