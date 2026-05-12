@@ -21,6 +21,8 @@ import OtpVerification from "../components/OtpVerification";
   
 import { useAuthStore } from "@/store/authStore";
 import { normalizeRole } from "@/lib/auth";
+import { parseError } from "../api/authApi";
+ 
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -221,47 +223,31 @@ setUser({
 
   } catch (err: unknown) {
 
-    console.error(err)
+  console.error(err);
 
-    const data =
-      (err as any)
-        ?.response?.data ?? {}
+  const msg = parseError(err);
 
-    // =================================================
-    // EMAIL NOT VERIFIED
-    // =================================================
-    if (
-      data?.email_verification_required
-    ) {
+  // =================================================
+  // EMAIL NOT VERIFIED
+  // =================================================
+  if (
+    msg.toLowerCase().includes("verify")
+  ) {
 
-      setEmail(
-        data.email ||
-        form.identifier
-      )
+    setEmail(form.identifier);
 
-      setShowOtp(true)
+    setShowOtp(true);
 
-      setError("")
+    setError("");
 
-      return
-    }
-
-    // =================================================
-    // NORMAL ERRORS
-    // =================================================
-    setError(
-
-      data?.message ||
-
-      data?.error ||
-
-      data?.detail ||
-
-      (err as Error)?.message ||
-
-      "Invalid credentials"
-    )
+    return;
   }
+
+  // =================================================
+  // NORMAL ERRORS
+  // =================================================
+  setError(msg || "Invalid credentials");
+}
 }
   /* ================= VERIFY OTP ================= */
  const handleVerifyOtp = async (otp: string) => {
@@ -335,13 +321,12 @@ const handleResend = async () => {
       await forgotMutation.mutateAsync(forgotEmail);
       setForgotSuccess("Reset link sent successfully!");
       setCooldown(30);
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error ||
-          err?.response?.data?.message ||
-          "Failed to send reset link",
-      );
-    }
+    } catch (err: unknown) {
+
+  setError(
+    parseError(err)
+  );
+}
   };
 
   useEffect(() => {

@@ -1,8 +1,7 @@
 import { useParams, useSearch, useNavigate } from "@tanstack/react-router";
 import { useClient } from "../hooks/useClients";
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
-import { createFileRoute } from "@tanstack/react-router";
-import {
+ import {
   User,
   TrendingUp,
   Activity,
@@ -14,29 +13,20 @@ import {
 import TradeTable from "../components/TradeTable";
 import type { Trade } from "../components/TradeTable";
 import OrdersTable from "../components/OrdersTable";
+
 import PositionsTable from "../components/PositionsTable";
 import { useEffect, useRef, useState, useMemo } from "react";
 import FilterBar from "../components/FilterBar";
-import { requireAdmin } from "@/lib/auth";
+ 
 import type { Order } from "../components/OrdersTable";
 
-const validTabs = ["trades", "orders", "positions", "errors"] as const;
-type TabType = (typeof validTabs)[number];
+type TabType =
+  | "trades"
+  | "orders"
+  | "positions"
+  | "errors";
 
-export const Route = createFileRoute("/admin/client/$id")({
-  beforeLoad: () => {
-    requireAdmin();
-  },
-  validateSearch: (search: unknown): { tab: TabType } => {
-    const s = search as Record<string, unknown>;
-    const tab =
-      typeof s.tab === "string" && (validTabs as readonly string[]).includes(s.tab)
-        ? (s.tab as TabType)
-        : "trades";
-    return { tab };
-  },
-  component: ClientDetailPage,
-});
+ 
 
 /* ─── DUMMY DATA (backend-ready shapes) ──────────────────── */
 
@@ -73,19 +63,13 @@ export default function ClientDetailPage() {
   const searchParams = useSearch({ from: "/admin/client/$id" });
   const navigate = useNavigate({ from: "/admin/client/$id" });
 
-  const [activeTab, setActiveTab] = useState<TabType>(
-    () => searchParams.tab ?? "trades"
-  );
+  const activeTab: TabType =
+  searchParams.tab ?? "trades";
 
-  /* sync URL → state */
-  useEffect(() => {
-    if (searchParams.tab && searchParams.tab !== activeTab) {
-      setActiveTab(searchParams.tab);
-    }
-  }, [searchParams.tab]);
+ 
 
   const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
+    
     navigate({ search: (prev: { tab?: TabType }) => ({ ...(prev ?? {}), tab }) });
   };
 
@@ -118,12 +102,15 @@ export default function ClientDetailPage() {
   }, []);
 
   /* filter helpers */
-  const matchDate = (dateStr: string) => {
+const matchDate = useMemo(
+  () => (dateStr: string) => {
     const d = new Date(dateStr);
     const f = !fromDate || d >= new Date(fromDate);
     const t = !toDate   || d <= new Date(toDate);
     return f && t;
-  };
+  },
+  [fromDate, toDate]
+);
 
   const filteredTrades = useMemo(() =>
     DUMMY_TRADES.filter((t) => {
@@ -133,7 +120,7 @@ export default function ClientDetailPage() {
       const matchStatus = status === "ALL" || t.status === status;
       return matchSearch && matchStatus && matchDate(t.date);
     }),
-  [search, status, fromDate, toDate]);
+  [search, status, matchDate]);
 
   const filteredOrders = useMemo(() =>
     DUMMY_ORDERS.filter((o) => {
@@ -143,7 +130,7 @@ export default function ClientDetailPage() {
       const matchStatus = status === "ALL" || o.status === status;
       return matchSearch && matchStatus && matchDate(o.date);
     }),
-  [search, status, fromDate, toDate]);
+  [search, status, matchDate]);
 
   const filteredPositions = useMemo(() =>
     positions.filter((p) =>

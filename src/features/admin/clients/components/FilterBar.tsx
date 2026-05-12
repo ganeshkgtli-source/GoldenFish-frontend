@@ -33,7 +33,7 @@ export default function FilterBar({
     if (mode === "single") {
       setToDate(fromDate);
     }
-  }, [mode, fromDate]);
+  }, [mode, fromDate, setToDate]);
 const today = new Date().toISOString().split("T")[0];
   const handleReset = () => {
     setSearch("");

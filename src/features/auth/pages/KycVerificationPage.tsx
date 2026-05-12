@@ -13,6 +13,7 @@ import {
 import { useKycVerification } from "../hooks/useAuth";
 import ThemeToggle from "../components/ThemeToggle";
 import { useAuthStore } from "@/store/authStore";
+import { parseError } from "../api/authApi";
 
 export default function KycVerificationPage() {
 const user =
@@ -150,21 +151,15 @@ const handleSubmit = async (
       replace: true,
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
 
-    console.error(err);
+  console.error(err);
 
-    setError(
-
-      err?.response?.data?.message ||
-
-      err?.response?.data?.error ||
-
-      err?.message ||
-
-      "Failed to submit KYC"
-    );
-  }
+  setError(
+    parseError(err) ||
+    "Failed to submit KYC"
+  );
+}
 };
   return (
 

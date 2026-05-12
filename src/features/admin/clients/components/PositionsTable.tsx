@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 export type Position = {
   id: string;
@@ -31,9 +31,7 @@ export default function PositionsTable({ data }: { data: Position[] }) {
 
   const totalPages = Math.ceil(calculated.length / rowsPerPage);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [rowsPerPage]);
+
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col h-[400px]">
@@ -89,7 +87,13 @@ export default function PositionsTable({ data }: { data: Position[] }) {
             <span className="text-muted-foreground">Rows</span>
             <select
               value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
+              onChange={(e) => {
+  setRowsPerPage(
+    Number(e.target.value)
+  );
+
+  setCurrentPage(1);
+}}
               className="
                 px-3 py-2 text-sm rounded-lg
                 bg-[var(--input-background)]

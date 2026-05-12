@@ -1,14 +1,8 @@
-import {
-  Wallet,
-  TrendingUp,
-  BarChart3,
-  Briefcase,
-} from "lucide-react";
+import { Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
 
 export default function StatsCards() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-
       <Card
         title="Total Balance"
         value="₹1,24,500.00"
@@ -40,15 +34,32 @@ export default function StatsCards() {
         icon={<Briefcase size={18} />}
         color="orange"
       />
-
     </div>
   );
 }
 
 /* ================= CARD ================= */
+type CardColor = "blue" | "green" | "purple" | "orange";
 
-function Card({ title, value, change, icon, color }: any) {
-  const colorMap: any = {
+type CardProps = {
+  title: string;
+  value: string;
+  change: string;
+  icon: React.ReactNode;
+  color: CardColor;
+};
+
+type ColorMap = Record<
+  CardColor,
+  {
+    bg: string;
+    border: string;
+    icon: string;
+  }
+>;
+
+function Card({ title, value, change, icon, color }: CardProps) {
+  const colorMap: ColorMap = {
     blue: {
       bg: "from-blue-500/10 to-transparent",
       border: "border-blue-500/20",
@@ -77,8 +88,8 @@ function Card({ title, value, change, icon, color }: any) {
   const changeColor = isPositive
     ? "text-green-400"
     : isNegative
-    ? "text-red-400"
-    : "text-muted-foreground";
+      ? "text-red-400"
+      : "text-muted-foreground";
 
   return (
     <div
@@ -90,15 +101,10 @@ function Card({ title, value, change, icon, color }: any) {
 
       {/* HEADER */}
       <div className="flex items-center justify-between mb-3 relative z-10">
-
-        <p className="text-xs text-muted-foreground tracking-wide">
-          {title}
-        </p>
+        <p className="text-xs text-muted-foreground tracking-wide">{title}</p>
 
         {/* ICON */}
-        <div className={`p-2 rounded-lg ${colorMap[color].icon}`}>
-          {icon}
-        </div>
+        <div className={`p-2 rounded-lg ${colorMap[color].icon}`}>{icon}</div>
       </div>
 
       {/* VALUE (🔥 BIG IMPACT) */}

@@ -82,8 +82,7 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
-  const [canResend, setCanResend] = useState(false);
-
+const canResend = resendTimer <= 0;
   /* — Active section tab — */
   const [activeSection, setActiveSection] = useState<
     "overview" | "security" | "api" | "account"
@@ -115,14 +114,15 @@ export default function Profile() {
     : 0;
 
   /* — OTP countdown — */
-  useEffect(() => {
-    if (resendTimer <= 0) {
-      setCanResend(true);
-      return;
-    }
-    const t = setTimeout(() => setResendTimer((n) => n - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendTimer]);
+ useEffect(() => {
+  if (resendTimer <= 0) return;
+
+  const t = setTimeout(() => {
+    setResendTimer((n) => n - 1);
+  }, 1000);
+
+  return () => clearTimeout(t);
+}, [resendTimer]);
 
   /* ── HANDLERS ────────────────────────────────────────────── */
 
@@ -163,8 +163,7 @@ export default function Profile() {
         toast.success("OTP sent to your email 📩");
         setStep("otp");
         setResendTimer(60);
-        setCanResend(false);
-      },
+       },
       onError: (err: Error) => {
         toast.error(err.message || "Failed to send OTP");
       },

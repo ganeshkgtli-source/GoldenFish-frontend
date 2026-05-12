@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   TrendingUp,
   User,
@@ -10,13 +10,21 @@ import {
   Eye,
   EyeOff,
   Copy,
-   } from "lucide-react";
+} from "lucide-react";
 // import api from "@/lib/api";
 import OtpVerification from "./OtpVerification";
+type ActionResponse = {
+  success?: boolean;
+  message?: string;
+  status?: string;
+};
 interface Props {
-  onSubmit: (data: RegisterPayload) => Promise<any>;
-  onVerifyOtp: (otp: string) => Promise<any>;
-  onResend?: () => Promise<any>;
+  onSubmit: (data: RegisterPayload) => Promise<ActionResponse>;
+
+  onVerifyOtp: (otp: string) => Promise<ActionResponse>;
+
+  onResend?: () => Promise<ActionResponse>;
+
   loading: boolean;
   initialEmail?: string;
 }
@@ -62,7 +70,11 @@ const parseError = (err: unknown): string => {
     "Something went wrong"
   );
 };
-
+const STEPS = [
+  { number: 1, title: "Personal Info", icon: User },
+  { number: 2, title: "Security", icon: Lock },
+  { number: 3, title: "API Setup", icon: Key },
+];
 export default function RegisterWizard({
   onSubmit,
   onVerifyOtp,
@@ -71,14 +83,13 @@ export default function RegisterWizard({
   onResend,
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
-const checkUserMutation = useCheckUserExists();
-const [form, setForm] = useState<FormState>({
+  const checkUserMutation = useCheckUserExists();
+  const savedEmail = sessionStorage.getItem("verify_email") || "";
+
+  const [form, setForm] = useState<FormState>({
     username: "",
-    // email: initialEmail,
-    email:
-  initialEmail ||
-  sessionStorage.getItem("verify_email") ||
-  "",
+
+    email: initialEmail || savedEmail,
     phone: "",
     password: "",
     confirm_password: "",
@@ -88,9 +99,8 @@ const [form, setForm] = useState<FormState>({
     terms_accepted: false,
     account_type: null,
   });
-const [copied, setCopied] =
-  useState(false);
-  const [showOtp, setShowOtp] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showOtp, setShowOtp] = useState(Boolean(savedEmail));
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [hasDhanAccount, setHasDhanAccount] = useState<boolean | null>(null);
@@ -98,52 +108,21 @@ const [copied, setCopied] =
   //   null,
   // );
   const [submitting, setSubmitting] = useState(false);
-  const steps = [
-    { number: 1, title: "Personal Info", icon: User },
-    { number: 2, title: "Security", icon: Lock },
-    { number: 3, title: "API Setup", icon: Key },
-  ];
-useEffect(() => {
-  const savedEmail = sessionStorage.getItem("verify_email");
 
-  if (savedEmail) {
-    setShowOtp(true);
-
-    // also sync email into form (important)
-    setForm((prev) => ({
-      ...prev,
-      email: savedEmail,
-    }));
-  }
-}, []);
-const callbackUrl =
-  "http://127.0.0.1:8000/api/dhan/callback/";
-
-const handleCopyCallback =
-  async () => {
-
+  const callbackUrl = import.meta.env.VITE_DHAN_CALLBACK_URL;
+  const handleCopyCallback = async () => {
     try {
-
-      await navigator.clipboard.writeText(
-        callbackUrl
-      );
+      await navigator.clipboard.writeText(callbackUrl);
 
       setCopied(true);
 
       setTimeout(() => {
-
         setCopied(false);
-
       }, 2000);
-
     } catch (err) {
-
-      console.error(
-        "Copy failed",
-        err
-      );
+      console.error("Copy failed", err);
     }
-};
+  };
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     //     console.log(name, value, type, checked);
@@ -245,175 +224,117 @@ const handleCopyCallback =
     return true;
   };
 
-   
-const handleNext = async () => {
-  if (loading) return;
+  const handleNext = async () => {
+    if (loading) return;
 
-  setError("");
+    setError("");
 
-  if (!validateStep()) return;
+    if (!validateStep()) return;
 
-  if (currentStep === 1) {
-    try {
-      const res = await checkUserMutation.mutateAsync({
-        username: form.username,
-        email: form.email,
-        phone: form.phone.replace(/^\+91/, ""),
-      });
+    if (currentStep === 1) {
+      try {
+        const res = await checkUserMutation.mutateAsync({
+          username: form.username,
+          email: form.email,
+          phone: form.phone.replace(/^\+91/, ""),
+        });
 
-      if (res.exists) {
-        setError(res.message || "User already exists");
+        if (res.exists) {
+          setError(res.message || "User already exists");
+          return;
+        }
+
+        setCurrentStep(2);
+      } catch (err) {
+        setError(parseError(err));
+      }
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (hasDhanAccount === null) {
+        setError("Please select an option");
         return;
       }
 
-      setCurrentStep(2);
-    } catch (err) {
-      setError(parseError(err));
-    }
-    return;
-  }
+      if (!hasDhanAccount) {
+        window.open("https://dhan.co/", "_blank");
+        setError("Create Dhan account first");
+        return;
+      }
 
-  if (currentStep === 2) {
-    if (hasDhanAccount === null) {
-      setError("Please select an option");
+      if (!form.account_type) {
+        setError("Select account type");
+        return;
+      }
+
+      setCurrentStep(3);
       return;
     }
 
-    if (!hasDhanAccount) {
-      window.open("https://dhan.co/", "_blank");
-      setError("Create Dhan account first");
-      return;
+    if (currentStep < 3) {
+      setCurrentStep((prev) => prev + 1);
     }
+  };
 
- if (!form.account_type) {
-  setError("Select account type");
-  return;
-}
-
-    setCurrentStep(3);
-    return;
-  }
-
-  if (currentStep < 3) {
-    setCurrentStep((prev) => prev + 1);
-  }
-};
-  // const handleNext = async () => {
-  //   if (loading) return;
-  //   if (!validateStep()) return;
-
-  //   // 🔹 STEP 1 → check user exists
-  //   if (currentStep === 1) {
-  //     try {
-  //       if (!form.phone) {
-  //         setError("Phone number is required");
-  //         return;
-  //       }
-  //       const res = await checkUserExists(
-  //         form.username,
-  //         form.email,
-  //         form.phone,
-  //       );
-
-  //       if (res.exists) {
-  //         setError(res.message);
-  //         return;
-  //       }
-  //     } catch (error) {
-  //       console.log(error);
-  //       setError("Failed to validate user details");
-  //       return;
-  //     }
-  //   }
-
-  //   // 🔹 STEP 2 → dhan + account type logic
-  //   if (currentStep === 2) {
-  //     if (hasDhanAccount === null) {
-  //       setError("Please select an option to continue");
-  //       return;
-  //     }
-  //     if (hasDhanAccount === true) {
-  //       if (!accountType) {
-  //         setError("Please select account type");
-  //         return;
-  //       }
-
-  //       setCurrentStep(3);
-  //     } else {
-  //       window.open("https://dhan.co/", "_blank");
-  //       setError("Please create a Dhan account and come back to continue.");
-  //     }
-
-  //     return;
-
-  //     return;
-  //   }
-
-  //   // 🔹 DEFAULT FLOW
-  //   if (currentStep < 3) {
-  //     setCurrentStep((prev) => prev + 1);
-  //   }
-  // };
- 
- 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
       setError("");
     }
   };
-const handleSubmit = async () => {
-  if (loading || submitting) return;
+  const handleSubmit = async () => {
+    if (loading || submitting) return;
 
-  setError("");
-  setSuccess("");
+    setError("");
+    setSuccess("");
 
-  if (!validateStep()) return;
+    if (!validateStep()) return;
 
-  if (!form.account_type) {
-    setError("Please select account type");
-    return;
-  }
+    if (!form.account_type) {
+      setError("Please select account type");
+      return;
+    }
 
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    const { confirm_password, ...payload } = {
-      ...form,
-      username: form.username.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-    };
+    try {
+      const payload = {
+        username: form.username.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        client_id: form.client_id,
+        api_key: form.api_key,
+        api_secret: form.api_secret,
+        terms_accepted: form.terms_accepted,
+      };
 
-    const cleanedPayload =
-      form.account_type === "AP"
-        ? { ...payload, api_key: "", api_secret: "" }
-        : payload;
+      const cleanedPayload =
+        form.account_type === "AP"
+          ? { ...payload, api_key: "", api_secret: "" }
+          : payload;
 
-    const res = await onSubmit({
-      ...cleanedPayload,
-      phone: payload.phone.replace(/^\+91/, ""),
-      account_type: form.account_type,
-    });
+      const res = await onSubmit({
+        ...cleanedPayload,
+        phone: payload.phone.replace(/^\+91/, ""),
+        account_type: form.account_type,
+      });
 
-if (res?.success !== false) {
-  sessionStorage.setItem(
-    "verify_email",
-    form.email.trim().toLowerCase()
-  );
+      if (res?.success !== false) {
+        sessionStorage.setItem("verify_email", form.email.trim().toLowerCase());
 
-  setShowOtp(true);
-} else {
-  setError(res?.message || "Registration failed");
-}
+        setShowOtp(true);
+      } else {
+        setError(res?.message || "Registration failed");
+      }
+    } catch (err) {
+      setError(parseError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  } catch (err) {
-    setError(parseError(err));
-  } finally {
-    setSubmitting(false);
-  }
-};
-    
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center p-4 w-full max-w-md sm:max-w-lg md:max-w-xl">
       <div className="w-full max-w-3xl">
@@ -442,12 +363,12 @@ if (res?.success !== false) {
                     <div
                       className="h-full bg-red-600 transition-all duration-500"
                       style={{
-                        width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+                        width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%`,
                       }}
                     />
                   </div>
 
-                  {steps.map((step) => {
+                  {STEPS.map((step) => {
                     const Icon = step.icon;
                     const isCompleted = currentStep > step.number;
                     const isCurrent = currentStep === step.number;
@@ -659,188 +580,176 @@ if (res?.success !== false) {
                     )}
 
                     {/* Dhan Account Selection (Clean Card UI - No Checkbox) */}
-                 <div className="mt-6">
-  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-    Do you have a Dhan trading account?
-  </p>
+                    <div className="mt-6">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Do you have a Dhan trading account?
+                      </p>
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    
-    {/* YES CARD */}
-    <div
-      onClick={() => {
-        setHasDhanAccount(true);
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* YES CARD */}
+                        <div
+                          onClick={() => {
+                            setHasDhanAccount(true);
 
-        // ✅ DO NOT set account_type here
-        setForm((prev) => ({
-          ...prev,
-          account_type: null,
-        }));
-      }}
-      className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+                            // ✅ DO NOT set account_type here
+                            setForm((prev) => ({
+                              ...prev,
+                              account_type: null,
+                            }));
+                          }}
+                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
         ${
           hasDhanAccount === true
             ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
             : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
         }`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-sm font-semibold text-green-400">
-            Yes, I have one
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Continue with API setup
-          </p>
-        </div>
-      </div>
-    </div>
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-green-400">
+                                Yes, I have one
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Continue with API setup
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
-    {/* NO CARD */}
-    <div
-      onClick={() => {
-        setHasDhanAccount(false);
+                        {/* NO CARD */}
+                        <div
+                          onClick={() => {
+                            setHasDhanAccount(false);
 
-        // ✅ also reset here
-        setForm((prev) => ({
-          ...prev,
-          account_type: null,
-        }));
-      }}
-      className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+                            // ✅ also reset here
+                            setForm((prev) => ({
+                              ...prev,
+                              account_type: null,
+                            }));
+                          }}
+                          className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
         ${
           hasDhanAccount === false
             ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
             : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
         }`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-sm font-semibold text-blue-400">
-            No, create account
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Redirect to Dhan signup
-          </p>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-blue-400">
+                                No, create account
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Redirect to Dhan signup
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* 🔥 ADD THIS BLOCK BELOW */}
                     {hasDhanAccount === true && (
-  <div className="mt-6">
-    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-      Select Account Type
-    </p>
+                      <div className="mt-6">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          Select Account Type
+                        </p>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-      {/* INDIVIDUAL */}
-      <div
-        onClick={() =>
-          setForm((prev) => ({
-            ...prev,
-            account_type: "INDIVIDUAL",
-          }))
-        }
-        className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* INDIVIDUAL */}
+                          <div
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                account_type: "INDIVIDUAL",
+                              }))
+                            }
+                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
           ${
             form.account_type === "INDIVIDUAL"
               ? "border-green-500 bg-green-500/10 ring-2 ring-green-400/40"
               : "border-green-400/40 bg-green-500/5 hover:bg-green-500/10"
           }`}
-      >
-        <div className="text-sm font-semibold text-green-400">
-          INDIVIDUAL Account
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Full API setup required
-        </p>
-      </div>
+                          >
+                            <div className="text-sm font-semibold text-green-400">
+                              INDIVIDUAL Account
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Full API setup required
+                            </p>
+                          </div>
 
-      {/* API */}
-      <div
-        onClick={() =>
-          setForm((prev) => ({
-            ...prev,
-            account_type: "AP",
-            api_key: "",
-            api_secret: "",
-          }))
-        }
-        className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
+                          {/* API */}
+                          <div
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                account_type: "AP",
+                                api_key: "",
+                                api_secret: "",
+                              }))
+                            }
+                            className={`cursor-pointer border rounded-xl p-4 transition-all duration-200
           ${
             form.account_type === "AP"
               ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-400/40"
               : "border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10"
           }`}
-      >
-        <div className="text-sm font-semibold text-blue-400">
-          API Account
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Only Client ID required
-        </p>
-      </div>
-
-    </div>
-  </div>
-)}
+                          >
+                            <div className="text-sm font-semibold text-blue-400">
+                              API Account
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Only Client ID required
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* STEP 3 */}
-  {currentStep === 3 && (
-  <div className="space-y-5">
+                {currentStep === 3 && (
+                  <div className="space-y-5">
+                    <div className="mb-6">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        {form.account_type === "AP"
+                          ? "Client ID Setup"
+                          : "API Configuration"}
+                      </h2>
 
-    <div className="mb-6">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Connect your Dhan trading account
+                      </p>
+                    </div>
 
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    {/* CLIENT ID */}
+                    <Field
+                      label="Client ID"
+                      name="client_id"
+                      placeholder="Enter your Dhan Client ID"
+                      value={form.client_id}
+                      onChange={handleChange}
+                    />
 
-        {form.account_type === "AP"
-          ? "Client ID Setup"
-          : "API Configuration"}
-      </h2>
+                    {/* REDIRECT URL */}
+                    <div className="space-y-3">
+                      {/* LABEL */}
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                          Dhan Redirect URL
+                        </label>
 
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-medium border border-red-200 dark:border-red-500/20">
+                          REQUIRED
+                        </span>
+                      </div>
 
-        Connect your Dhan trading account
-      </p>
-    </div>
-
-    {/* CLIENT ID */}
-    <Field
-      label="Client ID"
-      name="client_id"
-      placeholder="Enter your Dhan Client ID"
-      value={form.client_id}
-      onChange={handleChange}
-    />
-
-    {/* REDIRECT URL */}
-<div className="space-y-3">
-
-  {/* LABEL */}
-  <div className="flex items-center justify-between">
-
-    <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-
-      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-
-      Dhan Redirect URL
-    </label>
-
-    <span className="text-[10px] px-2 py-1 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-medium border border-red-200 dark:border-red-500/20">
-
-      REQUIRED
-    </span>
-  </div>
-
-  {/* URL CARD */}
-  <div className="
+                      {/* URL CARD */}
+                      <div
+                        className="
     relative
     overflow-hidden
     rounded-2xl
@@ -854,10 +763,11 @@ if (res?.success !== false) {
     dark:to-red-950/10
     shadow-lg
     shadow-red-500/5
-  ">
-
-    {/* GLOW EFFECT */}
-    <div className="
+  "
+                      >
+                        {/* GLOW EFFECT */}
+                        <div
+                          className="
       absolute
       top-0
       right-0
@@ -866,12 +776,13 @@ if (res?.success !== false) {
       bg-red-500/10
       blur-3xl
       rounded-full
-    " />
+    "
+                        />
 
-    <div className="relative p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
-
-      {/* URL INPUT */}
-      <div className="
+                        <div className="relative p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+                          {/* URL INPUT */}
+                          <div
+                            className="
         flex-1
         h-[42px]
         px-4
@@ -885,25 +796,26 @@ if (res?.success !== false) {
         flex
         items-center
         overflow-x-auto
-      ">
-
-        <span className="
+      "
+                          >
+                            <span
+                              className="
           text-[13px]
           font-medium
           text-gray-700
           dark:text-gray-300
           whitespace-nowrap
-        ">
+        "
+                            >
+                              {callbackUrl}
+                            </span>
+                          </div>
 
-          {callbackUrl}
-        </span>
-      </div>
-
-      {/* COPY BUTTON */}
-      <button
-        type="button"
-        onClick={handleCopyCallback}
-        className="
+                          {/* COPY BUTTON */}
+                          <button
+                            type="button"
+                            onClick={handleCopyCallback}
+                            className="
           h-[42px]
           min-w-[110px]
           px-4
@@ -926,25 +838,25 @@ if (res?.success !== false) {
           hover:scale-[1.02]
           active:scale-[0.98]
         "
-      >
+                          >
+                            {copied ? (
+                              <>
+                                <Check size={15} />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={15} />
+                                Copy URL
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
 
-        {copied ? (
-          <>
-            <Check size={15} />
-            Copied
-          </>
-        ) : (
-          <>
-            <Copy size={15} />
-            Copy URL
-          </>
-        )}
-      </button>
-    </div>
-  </div>
-
-  {/* INFO CARD */}
-  <div className="
+                      {/* INFO CARD */}
+                      <div
+                        className="
     rounded-xl
     border
     border-blue-200/60
@@ -953,93 +865,85 @@ if (res?.success !== false) {
     dark:bg-blue-500/5
     px-4
     py-3
-  ">
-
-    <p className="
+  "
+                      >
+                        <p
+                          className="
       text-[13px]
       leading-relaxed
       text-blue-800
       dark:text-blue-300
-    ">
+    "
+                        >
+                          Create a new{" "}
+                          <span className="font-semibold">
+                            Dhan API Credential
+                          </span>{" "}
+                          and paste this redirect URL inside your{" "}
+                          <span className="font-semibold">
+                            Dhan Developer App Settings
+                          </span>{" "}
+                          to enable secure authentication and callback
+                          verification.
+                        </p>
+                      </div>
+                    </div>
 
-      Create a new{" "}
+                    {/* ONLY FOR INDIVIDUAL ACCOUNT */}
+                    {form.account_type === "INDIVIDUAL" && (
+                      <>
+                        <Field
+                          label="API Key"
+                          name="api_key"
+                          placeholder="Enter your API Key"
+                          value={form.api_key}
+                          onChange={handleChange}
+                        />
 
-      <span className="font-semibold">
-        Dhan API Credential
-      </span>
+                        <Field
+                          label="API Secret"
+                          name="api_secret"
+                          type="password"
+                          placeholder="Enter your API Secret"
+                          value={form.api_secret}
+                          onChange={handleChange}
+                        />
+                      </>
+                    )}
 
-      {" "}and paste this redirect URL inside your{" "}
+                    {/* TERMS */}
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="terms_accepted"
+                        checked={form.terms_accepted}
+                        onChange={handleChange}
+                        className="mt-1"
+                      />
 
-      <span className="font-semibold">
-        Dhan Developer App Settings
-      </span>
-
-      {" "}to enable secure authentication and callback verification.
-    </p>
-  </div>
-</div>
-
-    {/* ONLY FOR INDIVIDUAL ACCOUNT */}
-    {form.account_type === "INDIVIDUAL" && (
-      <>
-
-        <Field
-          label="API Key"
-          name="api_key"
-          placeholder="Enter your API Key"
-          value={form.api_key}
-          onChange={handleChange}
-        />
-
-        <Field
-          label="API Secret"
-          name="api_secret"
-          type="password"
-          placeholder="Enter your API Secret"
-          value={form.api_secret}
-          onChange={handleChange}
-        />
-      </>
-    )}
-
-    {/* TERMS */}
-    <label className="flex items-start gap-3">
-
-      <input
-        type="checkbox"
-        name="terms_accepted"
-        checked={form.terms_accepted}
-        onChange={handleChange}
-        className="mt-1"
-      />
-
-      <span className="text-sm text-gray-600 dark:text-gray-400">
-
-        I agree to the{" "}
-
-        <a
-          href="/terms-and-conditions"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-red-600 hover:text-red-700 font-medium underline"
-        >
-          Terms & Conditions
-        </a>{" "}
-
-        and{" "}
-
-        <a
-          href="/privacy-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-red-600 hover:text-red-700 font-medium underline"
-        >
-          Privacy Policy
-        </a>
-      </span>
-    </label>
-  </div>
-)}
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        I agree to the{" "}
+                        <a
+                          href="/terms-and-conditions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-red-600 hover:text-red-700 font-medium underline"
+                        >
+                          Terms & Conditions
+                        </a>{" "}
+                        and{" "}
+                        <a
+                          href="/privacy-policy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-red-600 hover:text-red-700 font-medium underline"
+                        >
+                          Privacy Policy
+                        </a>
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
               <div
                 className="px-6 sm:px-10 py-6 bg-gray-50 dark:bg-gray-800/50 border-t 
@@ -1113,36 +1017,30 @@ flex items-center justify-between gap-3"
             </>
           ) : (
             <OtpVerification
-email={form.email.trim().toLowerCase()}
+              email={form.email.trim().toLowerCase()}
               loading={loading}
               onVerify={async (otp: string) => {
                 setError("");
                 setSuccess("");
 
-//                 if (!onVerifyOtp) {
-//   throw new Error("OTP handler not provided");
-// }
-
-
-await onVerifyOtp(otp);
+                return onVerifyOtp(otp);
               }}
-              
               onResend={async () => {
-  try {
-    setError("");
+                try {
+                  setError("");
 
-    if (!onResend) return { message: "No handler" };
+                  if (!onResend) return { message: "No handler" };
 
-    const res = await onResend();
+                  const res = await onResend();
 
-    return res ?? { message: "OTP sent" };
-  }catch (err) {
-  const message = parseError(err);
-  setError(message);
+                  return res ?? { message: "OTP sent" };
+                } catch (err) {
+                  const message = parseError(err);
+                  setError(message);
 
-  return { success: false, message };
-}
-}}
+                  return { success: false, message };
+                }
+              }}
               title="Verify your email"
               subtitle="Enter the 6-digit OTP sent to your email"
             />
@@ -1163,8 +1061,6 @@ await onVerifyOtp(otp);
     </div>
   );
 }
-
- 
 
 type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -1224,5 +1120,3 @@ function Field({
     </div>
   );
 }
-
- 

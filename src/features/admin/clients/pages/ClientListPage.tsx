@@ -3,7 +3,19 @@ import { useNavigate } from "@tanstack/react-router";
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
 import { Search } from "lucide-react";
 import { useState, useEffect } from "react";
+interface Client {
+  id: number | string;
 
+  username: string;
+
+  client_id?: string | null;
+
+  is_active: boolean;
+
+  subscription?: {
+    plan?: string;
+  };
+}
 export default function ClientListPage() {
   const navigate = useNavigate();
 
@@ -171,7 +183,7 @@ const getAvatarColor = (name: string = "") => {
                 </div>
               )}
 
-              {clients.map((client: any) => {
+              {clients.map((client: Client) => {
                 const plan = client.subscription?.plan || "Basic";
                 const isUserActive = client.is_active;
 

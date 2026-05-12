@@ -5,7 +5,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 export type Option = { label: string; value: string };
-
+type PaginationProps = {
+  page: number;
+  setPage: React.Dispatch<
+    React.SetStateAction<number>
+  >;
+  totalPages: number;
+};
 // 🔹 FILTER DROPDOWN (Reusable)
 export function Filter({
   label,
@@ -62,7 +68,12 @@ export function Filter({
     </div>
   );
 }
-
+type TableRow = {
+  client: string;
+  symbol: string;
+  message: string;
+  status: string;
+};
 // 🔹 TABLE WRAPPER (Reusable)
 export function DataTable({
   columns,
@@ -70,8 +81,8 @@ export function DataTable({
   renderRow,
 }: {
   columns: string[];
-  data: any[];
-  renderRow: (row: any, i: number) => React.ReactNode;
+data: TableRow[];
+  renderRow: ( row: TableRow, i: number) => React.ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-border overflow-hidden">
@@ -105,7 +116,11 @@ export function DataTable({
 }
 
 // 🔹 PAGINATION
-export function Pagination({ page, setPage, totalPages }: any) {
+export function Pagination({
+  page,
+  setPage,
+  totalPages,
+}: PaginationProps) {
   function range(current: number, total: number) {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
     if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
@@ -124,8 +139,11 @@ export function Pagination({ page, setPage, totalPages }: any) {
           ) : (
             <button
               key={p}
-              onClick={() => setPage(p)}
-              className={page === p ? "bg-red-600 text-white px-2" : "px-2"}
+onClick={() => {
+  if (typeof p === "number") {
+    setPage(p);
+  }
+}}              className={page === p ? "bg-red-600 text-white px-2" : "px-2"}
             >
               {p}
             </button>

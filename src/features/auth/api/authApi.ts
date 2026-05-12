@@ -20,17 +20,7 @@ export type LoginPayload = {
   password: string;
 };
 
-// export type LoginResponse = {
-//   message: string;
-//   username: string;
-//   tokens: Tokens;
-//   role: "ADMIN" | "SUPER_ADMIN" | "USER";
-//   redirect_to: string;
-//   dhan_login_url: string | null;
-//   email_verification_required?: boolean;
-//   email?: string;
-// };
- export type LoginResponse = {
+export type LoginResponse = {
   message: string;
   username: string;
   tokens: Tokens;
@@ -49,7 +39,6 @@ export type VerifyOtpPayload = {
 };
 
 export interface KycResponse {
-
   status: string;
 
   message: string;
@@ -76,19 +65,48 @@ type ApiError = {
   detail?: string;
   [key: string]: unknown;
 };
-
+export type CheckUserExistsResponse = {
+  exists: boolean;
+  message?: string;
+};
 export const parseError = (err: unknown): string => {
   if (axios.isAxiosError(err)) {
-    const data = err.response?.data as ApiError | undefined;
+    const responseData = err.response?.data;
 
-    if (!data) return err.message || "Request failed";
+    // =====================================
+    // ARRAY RESPONSE
+    // =====================================
+    if (Array.isArray(responseData)) {
+      return responseData.map(String).join(", ");
+    }
 
-    if (typeof data.message === "string") return data.message;
-    if (typeof data.error === "string") return data.error;
-    if (typeof data.detail === "string") return data.detail;
+    // =====================================
+    // OBJECT RESPONSE
+    // =====================================
+    const data = responseData as ApiError | undefined;
 
-    if (Array.isArray(data)) return data.join(", ");
+    if (!data) {
+      return err.message || "Request failed";
+    }
 
+    // =====================================
+    // COMMON FIELDS
+    // =====================================
+    if (typeof data.message === "string") {
+      return data.message;
+    }
+
+    if (typeof data.error === "string") {
+      return data.error;
+    }
+
+    if (typeof data.detail === "string") {
+      return data.detail;
+    }
+
+    // =====================================
+    // VALIDATION ERRORS
+    // =====================================
     const messages: string[] = [];
 
     Object.values(data).forEach((value) => {
@@ -99,20 +117,29 @@ export const parseError = (err: unknown): string => {
       }
     });
 
-    if (messages.length > 0) return messages.join(", ");
+    if (messages.length > 0) {
+      return messages.join(", ");
+    }
 
     return err.message || "Request failed";
   }
 
-  if (err instanceof Error) return err.message;
+  // =====================================
+  // NORMAL JS ERROR
+  // =====================================
+  if (err instanceof Error) {
+    return err.message;
+  }
 
+  // =====================================
+  // UNKNOWN ERROR
+  // =====================================
   return "Something went wrong";
 };
-
 /* ================= REGISTER ================= */
 
 export const registerUser = async (
-  data: RegisterPayload
+  data: RegisterPayload,
 ): Promise<ApiResponse> => {
   try {
     const res = await api.post("/register/", data);
@@ -124,9 +151,7 @@ export const registerUser = async (
 
 /* ================= LOGIN ================= */
 
-export const loginUser = async (
-  data: LoginPayload
-): Promise<LoginResponse> => {
+export const loginUser = async (data: LoginPayload): Promise<LoginResponse> => {
   try {
     const res = await api.post("/login/", data);
 
@@ -140,103 +165,78 @@ export const loginUser = async (
   }
 };
 export const submitKycVerification = async (
-  formData: FormData
+  formData: FormData,
 ): Promise<KycResponse> => {
-
   try {
-
-    console.log(
-      "===== API FORM DATA ====="
-    );
-
-    for (
-      const pair
-      of formData.entries()
-    ) {
-
-      console.log(
-        pair[0],
-        pair[1]
-      );
-    }
-
     const res = await api.post(
-
       "/kyc_verify/",
 
       formData,
 
       {
         headers: {
-          "Content-Type":
-            "multipart/form-data",
+          "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
 
     if (res.data?.error) {
-
-      throw new Error(
-        res.data.error
-      );
+      throw new Error(res.data.error);
     }
 
     return res.data;
-
   } catch (err) {
-
-    throw new Error(
-      parseError(err)
-    );
+    throw new Error(parseError(err));
   }
 };
- 
+
 export const checkUserExists = async (payload: {
   username: string;
   email: string;
   phone: string;
-}) => {
-  const res = await api.post("/check-user-exists/", payload);
+}): Promise<CheckUserExistsResponse> => {
+  const res = await api.post<CheckUserExistsResponse>(
+    "/check-user-exists/",
+    payload,
+  );
+
   return res.data;
 };
 /* ================= VERIFY OTP ================= */
 
 export const verifyOtp = async (
-  payload: VerifyOtpPayload
+  payload: VerifyOtpPayload,
 ): Promise<ApiResponse> => {
   try {
     const res = await api.post("/verify-email/", payload);
 
     // ✅ HANDLE FAILURE RESPONSE (if backend returns 200 but error inside)
     if (
-  res.data?.status === "error" ||
-  res.data?.error ||
-  res.data?.success === false
-) {
-  throw new Error(
-    res.data.message || res.data.error || "Invalid OTP"
-  );
-}
+      res.data?.status === "error" ||
+      res.data?.error ||
+      res.data?.success === false
+    ) {
+      throw new Error(res.data.message || res.data.error || "Invalid OTP");
+    }
 
     return res.data;
   } catch (err) {
-if (axios.isAxiosError(err) && err.response?.data) {
-    const data = err.response.data;
+    // if (axios.isAxiosError(err) && err.response?.data) {
+    //     const data = err.response.data;
 
-    throw new Error(
-      data.message ||
-      data.error ||
-      "Invalid OTP"
-    );
+    //     throw new Error(
+    //       data.message ||
+    //       data.error ||
+    //       "Invalid OTP"
+    //     );
+    //   }
+
+    throw new Error(parseError(err));
   }
-
-  throw new Error(parseError(err));  }
 };
 /* ================= RESEND OTP ================= */
 
-export const resendOtp = async (
-  email: string
-): Promise<ApiResponse> => {
+export const resendOtp = async (email: string): Promise<ApiResponse> => {
   try {
     const res = await api.post("/resend-email-otp/", { email });
     return res.data;
@@ -247,15 +247,13 @@ export const resendOtp = async (
 
 /* ================= FORGOT PASSWORD ================= */
 
-export const forgotPassword = async (
-  email: string
-): Promise<ApiResponse> => {
+export const forgotPassword = async (email: string): Promise<ApiResponse> => {
   try {
     const res = await api.post("/forgot-password/", { email });
 
     if (res.data?.error) {
       throw new Error(
-        res.data.message || res.data.error || "Failed to send reset link"
+        res.data.message || res.data.error || "Failed to send reset link",
       );
     }
 
@@ -277,7 +275,7 @@ export const resetPassword = async (data: {
 
     if (res.data?.error) {
       throw new Error(
-        res.data.error || res.data.message || "Failed to reset password"
+        res.data.error || res.data.message || "Failed to reset password",
       );
     }
 
@@ -314,8 +312,3 @@ export const getProfile = async (): Promise<UserProfile> => {
     throw new Error(parseError(err));
   }
 };
-
-
-
-
- 

@@ -1,11 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect  , useCallback,} from "react";
 import { Mail } from "lucide-react";
-
+import { parseError } from "../api/authApi";
+type OtpResponse = {
+  success?: boolean;
+  message?: string;
+  status?: string;
+};
 interface Props {
   email: string;
   loading: boolean;
-  onVerify: (otp: string) => Promise<any>;
-onResend?: () => Promise<{ success?: boolean; message?: string }>;  title?: string;
+  onVerify: (otp: string) => Promise<OtpResponse>;
+  onResend?: () => Promise<{ success?: boolean; message?: string }>;
+  title?: string;
   subtitle?: string;
 }
 
@@ -88,7 +94,10 @@ export default function OtpVerification({
     }
   };
 
-  const handleKeyDown = (e: any, index: number) => {
+  const handleKeyDown = (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  index: number
+) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
@@ -115,54 +124,82 @@ export default function OtpVerification({
   };
 
   /* ================= VERIFY ================= */
-const handleVerify = async (code: string) => {
-  if (blocked || loading) return;
+ const handleVerify = useCallback(
+  async (code: string) => {
 
-  if (code.length !== 6) {
-    setError("Please enter valid 6-digit OTP");
-    triggerShake();
-    return;
-  }
+    if (blocked || loading) return;
 
-  try {
-    const res = await onVerify(code);
+    if (code.length !== 6) {
 
-    // 🚨 FORCE FAIL SAFE CHECK
-    if (!res || res.success === false || res.status === "error") {
-      setError(res?.message || "Invalid OTP");
-      setSuccess(""); // ✅ CLEAR SUCCESS
+      setError(
+        "Please enter valid 6-digit OTP"
+      );
+
       triggerShake();
+
       return;
     }
 
-    // ✅ SUCCESS ONLY IF VALID RESPONSE
-    setError("");
-    setSuccess("Verified successfully");
-    setOtp(["", "", "", "", "", ""]);
+    try {
 
-  } catch (err: unknown) {
-    const data = (err as any)?.response?.data;
+      const res =
+        await onVerify(code);
 
-    setSuccess(""); // ✅ IMPORTANT
+      if (
+        !res ||
+        res.success === false ||
+        res.status === "error"
+      ) {
 
-    triggerShake();
-    inputsRef.current[5]?.focus();
+        setError(
+          res?.message ||
+          "Invalid OTP"
+        );
 
-    if (data?.blocked) {
-      setBlocked(true);
+        setSuccess("");
 
-      if (data?.remaining_time) {
-        setTimer(data.remaining_time);
+        triggerShake();
+
+        return;
       }
 
-      setError("Too many attempts. Try later.");
-      return;
+      setError("");
+
+      setSuccess(
+        "Verified successfully"
+      );
+
+      setOtp([
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
+
+    } catch (err: unknown) {
+
+      setSuccess("");
+
+      triggerShake();
+
+      inputsRef.current[5]?.focus();
+
+      const message =
+        parseError(err);
+
+      setError(
+        message || "Invalid OTP"
+      );
     }
-
-    setError(data?.message || data?.error || "Invalid OTP");
-  }
-};
-
+  },
+  [
+    blocked,
+    loading,
+    onVerify,
+  ]
+);
   /* ================= AUTO VERIFY ================= */
   useEffect(() => {
     const code = otp.join("");
@@ -185,92 +222,110 @@ const handleVerify = async (code: string) => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [otp, loading, blocked, success]);
+  }, [otp, loading, blocked, handleVerify,success]);
 
   useEffect(() => {
-  const savedEmail = sessionStorage.getItem("verify_email");
+    const savedEmail = sessionStorage.getItem("verify_email");
 
-  if (!email && !savedEmail) {
-    setError("Session expired. Please register again.");
-  }
-}, [email]);
+    if (!email && !savedEmail) {
+      setError("Session expired. Please register again.");
+    }
+  }, [email]);
   /* ================= RESEND ================= */
 
- const handleResend = async () => {
-  if (resendLock.current) return;
-  resendLock.current = true;
+  const handleResend = async () => {
+    if (resendLock.current) return;
+    resendLock.current = true;
 
-  if (timer > 0) {
-    setError(`Please wait ${formatTime(timer)} before requesting again`);
-    resendLock.current = false;
+    if (timer > 0) {
+      setError(`Please wait ${formatTime(timer)} before requesting again`);
+      resendLock.current = false;
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setOtp(["", "", "", "", "", ""]);
+    setBlocked(false);
+    lastSubmittedOtp.current = null;
+
+    let res;
+
+    try {
+      // ✅ SAFE CALL (no crash if parent throws)
+      res = await onResend?.();
+
+      // ✅ SUCCESS HANDLING
+      if (res?.success === false) {
+        setError(res?.message || "Failed to resend OTP");
+        return;
+      }
+
+      setSuccess(res?.message ?? "OTP sent");
+      setTimer(30); // match backend cooldown
+
+      setTimeout(() => inputsRef.current[0]?.focus(), 50);
+   } catch (err: unknown) {
+
+  const message =
+    parseError(err);
+
+  // =============================
+  // 🔥 BLOCKED USER
+  // =============================
+  if (
+    message.toLowerCase().includes("blocked")
+  ) {
+
+    const seconds = 300;
+
+    setBlocked(true);
+
+    setTimer(seconds);
+
+    setError(
+      `You're temporarily blocked. Try again after ${formatTime(seconds)}`
+    );
+
     return;
   }
 
-  setError("");
-  setSuccess("");
-  setOtp(["", "", "", "", "", ""]);
-  setBlocked(false);
-  lastSubmittedOtp.current = null;
+  // =============================
+  // 🔥 COOLDOWN
+  // =============================
+  if (
+    message.toLowerCase().includes("please wait")
+  ) {
 
-  let res;
+    const match =
+      message.match(/\d+/);
 
-  try {
-    // ✅ SAFE CALL (no crash if parent throws)
-    res = await onResend?.();
+    const seconds =
+      match?.[0]
+        ? Number(match[0])
+        : 30;
 
-    // ✅ SUCCESS HANDLING
-    if (res?.success === false) {
-      setError(res?.message || "Failed to resend OTP");
-      return;
-    }
+    setTimer(seconds);
 
-    setSuccess(res?.message ?? "OTP sent");
-    setTimer(30); // match backend cooldown
+    setError(
+      `Wait ${formatTime(seconds)} before retry`
+    );
 
-    setTimeout(() => inputsRef.current[0]?.focus(), 50);
-  } catch (err: unknown) {
-    const data = (err as any)?.response?.data;
-
-    // =============================
-    // 🔥 BLOCK (5 MIN)
-    // =============================
-    if (data?.blocked) {
-      const seconds = Number(data?.remaining_time) || 300;
-
-      setBlocked(true);
-      setTimer(seconds);
-      setError(
-        `You're temporarily blocked. Try again after ${formatTime(seconds)}`
-      );
-      return;
-    }
-
-    // =============================
-    // 🔥 COOLDOWN (30 SEC)
-    // =============================
-    if (
-      data?.message?.toLowerCase().includes("please wait") &&
-      /\d+/.test(data?.message || "")
-    ) {
-      const seconds =
-        Number(data?.remaining_time) ||
-        parseInt(data?.message?.match(/\d+/)?.[0] || "30");
-
-      setTimer(seconds);
-      setError(`Wait ${formatTime(seconds)} before retry`);
-      return;
-    }
-
-    // =============================
-    // 🔥 NORMAL ERROR
-    // =============================
-    setError(data?.message || "Failed to resend OTP");
-  } finally {
-    setTimeout(() => {
-      resendLock.current = false;
-    }, 300);
+    return;
   }
-};
+
+  // =============================
+  // 🔥 NORMAL ERROR
+  // =============================
+  setError(
+    message || "Failed to resend OTP"
+  );
+} finally {
+      setTimeout(() => {
+        resendLock.current = false;
+      }, 300);
+    }
+  };
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl p-8 text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-600/10 flex items-center justify-center mx-auto mb-6">
@@ -284,9 +339,12 @@ const handleVerify = async (code: string) => {
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         {subtitle || "Enter the 6-digit OTP sent to"}
         <span className="block text-gray-900 dark:text-white font-medium mt-1">
-{(email || sessionStorage.getItem("verify_email") || "").toLowerCase()}      
-
-  </span>
+          {(
+            email ||
+            sessionStorage.getItem("verify_email") ||
+            ""
+          ).toLowerCase()}
+        </span>
       </p>
 
       {(error || success) && (

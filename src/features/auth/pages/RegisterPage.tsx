@@ -11,7 +11,7 @@ import {
 } from "../hooks/useAuth";
 
 import type { RegisterPayload } from "../api/authApi";
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 
 /* ================= HELPERS ================= */
 
@@ -31,13 +31,13 @@ const [registeredEmail, setRegisteredEmail] = useState(
   sessionStorage.getItem("verify_email") || ""
 );
   /* ================= REGISTER ================= */
-useEffect(() => {
-  const saved = sessionStorage.getItem("verify_email");
+// useEffect(() => {
+//   const saved = sessionStorage.getItem("verify_email");
 
-  if (saved) {
-    setRegisteredEmail(saved);
-  }
-}, []);
+//   if (saved) {
+//     setRegisteredEmail(saved);
+//   }
+// }, []);
   const handleRegister = async (data: RegisterPayload) => {
     try {
       await registerMutation.mutateAsync(data);

@@ -1,49 +1,60 @@
- 
 import { useEffect, useMemo, useState } from "react";
- import {
-  useMarketData,
-} from "@/client/hooks/useProfile";
+import { useMarketData } from "@/client/hooks/useProfile";
 
 type Stock = {
   name: string;
   price: number;
   change: number;
-    security_id: string;
+  security_id: string;
   flash?: "up" | "down" | null;
 };
-
+type MarketSymbol = {
+  SYMBOL_NAME?: string;
+  security_id: string;
+};
 export default function WatchlistSidebar() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [query, setQuery] = useState("");
-const {
-  data: marketData,
-  // isLoading,
-  // error,
-} = useMarketData();
-  /* ================= INITIAL API LOAD ================= */
- useEffect(() => {
+  const {
+    data: marketData,
+    // isLoading,
+    // error,
+  } = useMarketData();
 
-  if (!marketData?.data)
-    return;
+const initialStocks = useMemo<
+  Stock[]
+>(() => {
+  if (!marketData?.data) {
+    return [];
+  }
 
-  const formatted =
-    marketData.data.map(
-      (s: any) => ({
-        name:
-          s.SYMBOL_NAME?.toUpperCase(),
-         security_id:
+  return marketData.data.map(
+    (s: MarketSymbol) => ({
+      name:
+        s.SYMBOL_NAME?.toUpperCase() ||
+        "",
+
+      security_id:
         s.security_id,
-        price: 0,
 
-        change: 0,
-      })
-    );
+      price: 0,
 
-  setStocks(formatted);
-
+      change: 0,
+    })
+  );
 }, [marketData]);
 
-  /* ================= LIVE DATA (MOCK / WS TOGGLE) ================= */
+useEffect(() => {
+  if (
+    stocks.length === 0 &&
+    initialStocks.length > 0
+  ) {
+    queueMicrotask(() => {
+      setStocks(initialStocks);
+    });
+  }
+}, [stocks.length, initialStocks]);
+ 
 
   useEffect(() => {
     const USE_WS = false; // 🔥 CHANGE TO true WHEN BACKEND READY
@@ -157,68 +168,65 @@ const {
 
   /* ================= UI ================= */
   return (
-  <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-3 w-full">
+      {/* SEARCH */}
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search stocks..."
+        className="wizard-input text-sm border-none bg-muted focus:ring-1 focus:ring-primary/40"
+      />
 
-    {/* SEARCH */}
-    <input
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
-      placeholder="Search stocks..."
-      className="wizard-input text-sm border-none bg-muted focus:ring-1 focus:ring-primary/40"
-    />
+      {/* HEADER */}
+      <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
+        <span className="font-medium">Watchlist</span>
+        {/* <span className="cursor-pointer hover:text-foreground transition">+</span> */}
+      </div>
 
-    {/* HEADER */}
-    <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
-      <span className="font-medium">Watchlist</span>
-      {/* <span className="cursor-pointer hover:text-foreground transition">+</span> */}
-    </div>
+      {/* LIST (SCROLLABLE) */}
+      <div className="flex flex-col gap-2 max-h-[235px] overflow-y-auto scrollbar-hide pr-1">
+        {filtered.map((s, i) => {
+          const isUp = s.change >= 0;
 
-    {/* LIST (SCROLLABLE) */}
-    <div className="flex flex-col gap-2 max-h-[235px] overflow-y-auto scrollbar-hide pr-1">
-
-      {filtered.map((s, i) => {
-        const isUp = s.change >= 0;
-
-        return (
-          <div
-            key={i}
-            className={`
+          return (
+            <div
+              key={i}
+              className={`
               flex justify-between items-center px-3 py-2 rounded-xl
               transition-all duration-200
               hover:bg-muted/60
               ${isUp ? "bg-green-500/5" : "bg-red-500/5"}
             `}
-          >
-            {/* LEFT */}
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">
-                {s.name}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-               {s.security_id}
-              </span>
+            >
+              {/* LEFT */}
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-foreground">
+                  {s.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {s.security_id}
+                </span>
+              </div>
+
+              {/* RIGHT */}
+              <div className="text-right">
+                <p className="text-sm font-semibold text-foreground">
+                  ₹{s.price.toLocaleString()}
+                </p>
+
+                <p
+                  className={`text-[11px] font-medium ${
+                    isUp ? "text-green-500" : "text-red-500"
+                  }`}
+                >
+                  {isUp ? "+" : ""}
+                  {s.change}%
+                </p>
+              </div>
             </div>
-
-            {/* RIGHT */}
-            <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">
-                ₹{s.price.toLocaleString()}
-              </p>
-
-              <p
-                className={`text-[11px] font-medium ${
-                  isUp ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                {isUp ? "+" : ""}
-                {s.change}%
-              </p>
-            </div>
-          </div>
-        );
-      })}
-
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
 }
