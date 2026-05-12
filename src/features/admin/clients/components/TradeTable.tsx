@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef } from "react";
 import { ArrowUpDown } from "lucide-react";
 
 export type Trade = {
@@ -87,14 +87,18 @@ export default function TradeTable({ data }: { data: Trade[] }) {
     });
   }, [data, sortKey, asc]);
 
-  const handleSort = (key: keyof Trade) => {
-    if (key === sortKey) setAsc(!asc);
-    else {
-      setSortKey(key);
-      setAsc(true);
-    }
-  };
+ const handleSort = (
+  key: keyof Trade
+) => {
+  setCurrentPage(1);
 
+  if (key === sortKey) {
+    setAsc(!asc);
+  } else {
+    setSortKey(key);
+    setAsc(true);
+  }
+};
   // ✅ PAGINATION LOGIC
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
@@ -103,11 +107,7 @@ export default function TradeTable({ data }: { data: Trade[] }) {
 
   const totalPages = Math.ceil(sorted.length / rowsPerPage);
 
-  // ✅ reset page on change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [rowsPerPage, sortKey, asc]);
-
+ 
   return (
   <div className="flex flex-col h-[539px]">
 
@@ -245,8 +245,13 @@ export default function TradeTable({ data }: { data: Trade[] }) {
 
           <select
             value={rowsPerPage}
-            onChange={(e) => setRowsPerPage(Number(e.target.value))}
-            className="
+onChange={(e) => {
+  setRowsPerPage(
+    Number(e.target.value)
+  );
+
+  setCurrentPage(1);
+}}            className="
               px-3 py-2 text-sm rounded-lg
           bg-[var(--input-background)]
           border border-border

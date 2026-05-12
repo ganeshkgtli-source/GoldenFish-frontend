@@ -5,6 +5,7 @@ import { Eye, EyeOff, TrendingUp } from "lucide-react";
 
 import ThemeToggle from "@/features/auth/components/ThemeToggle";
 import api from "@/lib/api";
+import { parseError } from "../api/authApi";
 
 export default function ResetPassword() {
   const { uid, token } = Route.useParams();
@@ -34,58 +35,81 @@ export default function ResetPassword() {
     /[0-9]/.test(password) &&
     /[^A-Za-z0-9]/.test(password);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
+ const handleSubmit = async (
+  e: React.FormEvent<HTMLFormElement>
+) => {
 
-    setError("");
-    setMessage("");
+  e.preventDefault();
 
-    if (!isStrongPassword) {
-      setError(
-        "Password must include uppercase, lowercase, number & special character",
-      );
-      return;
-    }
+  setError("");
+  setMessage("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+  if (!isStrongPassword) {
+    setError(
+      "Password must include uppercase, lowercase, number & special character",
+    );
+    return;
+  }
 
-    setLoading(true);
+  if (password !== confirmPassword) {
+    setError("Passwords do not match");
+    return;
+  }
 
-    try {
-      const res = await api.post("/reset-password/", {
+  setLoading(true);
+
+  try {
+
+    const res = await api.post(
+      "/reset-password/",
+      {
         uid,
         token,
         password,
-      });
+      }
+    );
 
-      setMessage(
-        res.data?.message ||
-          "Password reset successful! Redirecting to login...",
+    setMessage(
+      res.data?.message ||
+      "Password reset successful! Redirecting to login..."
+    );
+
+    setTimeout(() => {
+      navigate({ to: "/signin" });
+    }, 2000);
+
+  } catch (err: unknown) {
+
+    const msg = parseError(err);
+
+    if (msg.toLowerCase().includes("expired")) {
+
+      setError(
+        "This reset link has expired. Please request a new one."
       );
 
-      setTimeout(() => {
-        navigate({ to: "/signin" });
-      }, 2000);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.error || err?.response?.data?.message || "";
+      setIsLinkInvalid(true);
 
-      if (msg.toLowerCase().includes("expired")) {
-        setError("This reset link has expired. Please request a new one.");
-        setIsLinkInvalid(true);
-      } else if (msg.toLowerCase().includes("invalid")) {
-        setError("Invalid reset link. Please request a new one.");
-      } else {
-        setError("Failed to reset password. Try again.");
-      }
-    } finally {
-      setLoading(false);
+    } else if (
+      msg.toLowerCase().includes("invalid")
+    ) {
+
+      setError(
+        "Invalid reset link. Please request a new one."
+      );
+
+    } else {
+
+      setError(
+        "Failed to reset password. Try again."
+      );
     }
-  };
 
+  } finally {
+
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-4 bg-slate-100 dark:bg-[#020B1F] transition-colors duration-300">
       <ThemeToggle variant="floating" />

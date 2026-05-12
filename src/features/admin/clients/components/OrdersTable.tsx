@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef } from "react";
 import { ArrowUpDown } from "lucide-react";
  
 export type Order = {
@@ -121,9 +121,7 @@ export default function OrdersTable({ data }: { data: Order[] }) {
 
   const totalPages = Math.ceil(sorted.length / rowsPerPage);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [rowsPerPage, sortKey, asc]);
+ 
 
   return (
     <div className="flex flex-col h-[520px]">
@@ -261,8 +259,13 @@ export default function OrdersTable({ data }: { data: Order[] }) {
             <span className="text-muted-foreground">Rows</span>
             <select
               value={rowsPerPage}
-              onChange={(e) => setRowsPerPage(Number(e.target.value))}
-              className="px-3 py-2 text-sm rounded-lg bg-[var(--input-background)] border border-border"
+onChange={(e) => {
+  setRowsPerPage(
+    Number(e.target.value)
+  );
+
+  setCurrentPage(1);
+}}              className="px-3 py-2 text-sm rounded-lg bg-[var(--input-background)] border border-border"
             >
               {[10, 20, 50, 100].map((n) => (
                 <option key={n} value={n}>{n}</option>

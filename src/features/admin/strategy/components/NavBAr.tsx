@@ -1,11 +1,22 @@
 import {
-  Moon,Sun,Menu,X,LayoutDashboard,LogOut,User,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  LayoutDashboard,
+  LogOut,
+  User,
   ChevronDown,
-  BrainCircuit, PlusSquare, BarChart3, Settings2, Activity, ShieldCheck, CandlestickChart,
-
+  BrainCircuit,
+  PlusSquare,
+  BarChart3,
+  Settings2,
+  Activity,
+  ShieldCheck,
+  CandlestickChart,
 } from "lucide-react";
 
-import { useTheme } from "@/context/ThemeContext";
+import { useTheme } from "@/context/useTheme";
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
@@ -13,20 +24,39 @@ import { useLogout } from "@/features/auth/hooks/useAuth";
 
 /* ─── NAV CONFIG ─────────────────────────────────────────── */
 
- 
-export const NAV_ITEMS = [{ label: "Dashboard", icon: LayoutDashboard, to: "/super-admin/dashboard" },
-     { label: "Strategies", icon: BrainCircuit, to: "/super-admin/strategies" },
-      { label: "Create Strategy", icon: PlusSquare, to: "/super-admin/createstrategies" },
-       { label: "Backtesting", icon: BarChart3, to: "/super-admin/backtesting" }, 
-       { label: "Live Trades", icon: CandlestickChart, to: "/super-admin/live-trades" }, 
-       { label: "Execution Monitor", icon: Activity, to: "/super-admin/execution-monitor" },
-        { label: "Risk Management", icon: ShieldCheck, to: "/super-admin/risk-management" }, 
-        { label: "Strategy Settings", icon: Settings2, to: "/super-admin/strategy-settings" },
-        //  { label: "Order Logs", icon: ClipboardList, to: "/super-admin/order-logs" }, 
-        //  { label: "Error Logs", icon: AlertTriangle, to: "/super-admin/error-logs" }
-        
-        ] as const;
-  
+ const NAV_ITEMS = [
+  { label: "Dashboard", icon: LayoutDashboard, to: "/super-admin/dashboard" },
+  { label: "Strategies", icon: BrainCircuit, to: "/super-admin/strategies" },
+  {
+    label: "Create Strategy",
+    icon: PlusSquare,
+    to: "/super-admin/createstrategies",
+  },
+  { label: "Backtesting", icon: BarChart3, to: "/super-admin/backtesting" },
+  {
+    label: "Live Trades",
+    icon: CandlestickChart,
+    to: "/super-admin/live-trades",
+  },
+  {
+    label: "Execution Monitor",
+    icon: Activity,
+    to: "/super-admin/execution-monitor",
+  },
+  {
+    label: "Risk Management",
+    icon: ShieldCheck,
+    to: "/super-admin/risk-management",
+  },
+  {
+    label: "Strategy Settings",
+    icon: Settings2,
+    to: "/super-admin/strategy-settings",
+  },
+  //  { label: "Order Logs", icon: ClipboardList, to: "/super-admin/order-logs" },
+  //  { label: "Error Logs", icon: AlertTriangle, to: "/super-admin/error-logs" }
+] as const;
+
 /* ─── TICKER DATA (static dummy — swap with real feed) ─── */
 // const TICKER = [
 //   { sym: "NIFTY",     val: "22,419.95", chg: "+0.42%" , up: true  },
@@ -41,17 +71,19 @@ export const NAV_ITEMS = [{ label: "Dashboard", icon: LayoutDashboard, to: "/sup
 ═══════════════════════════════════════════════════════════ */
 export default function SANavbar() {
   const { theme, toggleTheme } = useTheme();
-  const [mobileOpen, setMobileOpen]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [scrolled, setScrolled]       = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
-  const mobileRef  = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
-  const pathname = useRouterState({ select: s => s.location.pathname });
-  const navigate        = useNavigate();
-  const logoutMutation  = useLogout();
-  const user            = useAuthStore(s => s.user);
+  const pathname = useRouterState({
+    select: (s) => s.location.pathname,
+  });
+  const navigate = useNavigate();
+  const logoutMutation = useLogout();
+  const user = useAuthStore((s) => s.user);
 
   /* — shadow on scroll — */
   useEffect(() => {
@@ -63,27 +95,47 @@ export default function SANavbar() {
   /* — close menus on outside click — */
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node))
+      if (
+        profileOpen &&
+        profileRef.current &&
+        !profileRef.current.contains(e.target as Node)
+      ) {
         setProfileOpen(false);
-      if (mobileRef.current && !mobileRef.current.contains(e.target as Node))
+      }
+
+      if (
+        mobileOpen &&
+        mobileRef.current &&
+        !mobileRef.current.contains(e.target as Node)
+      ) {
         setMobileOpen(false);
+      }
     };
-    // document.addEventListener("mousedown", onClick);
+
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
+
+    return () => {
+      document.removeEventListener("click", onClick);
+    };
+  }, [profileOpen, mobileOpen]);
 
   /* — ESC close — */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setMobileOpen(false); setProfileOpen(false); }
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        setProfileOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   /* — close mobile on route change — */
-  useEffect(() => { setMobileOpen(false); setProfileOpen(false); }, [pathname]);
+  const closeMenus = () => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+  };
 
   const handleLogout = () => {
     if (logoutMutation.isPending) return;
@@ -117,24 +169,35 @@ export default function SANavbar() {
       </div> */}
 
       {/* ══ MAIN HEADER ════════════════════════════════════ */}
-      <header className={`
+      <header
+        className={`
         sticky top-0 z-50 w-full
         transition-all duration-300
         bg-background/90 backdrop-blur-xl
         border-b border-border
         ${scrolled ? "shadow-[0_2px_24px_rgba(0,0,0,0.08)]" : ""}
-      `}>
-        <div className="h-15 flex items-center px-4 md:px-6   mx-auto w-full gap-4" style={{ height: "3.75rem" }}>
-
+      `}
+      >
+        <div
+          className="h-15 flex items-center px-4 md:px-6   mx-auto w-full gap-4"
+          style={{ height: "3.75rem" }}
+        >
           {/* ── LOGO ─────────────────────────────────────── */}
           <button
-            onClick={() => navigate({ to: "/super-admin/dashboard" })}
-            className="flex items-center gap-2.5 flex-shrink-0 group"
+onClick={() => {
+  closeMenus();
+
+  navigate({
+    to: "/super-admin/dashboard",
+  });
+}}            className="flex items-center gap-2.5 flex-shrink-0 group"
             aria-label="Go to dashboard"
           >
             {/* diamond mark */}
-            <div className="relative w-9 h-9 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden
-              group-hover:border-red-500/40 transition-colors duration-200">
+            <div
+              className="relative w-9 h-9 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden
+              group-hover:border-red-500/40 transition-colors duration-200"
+            >
               <div className="w-3.5 h-3.5 border-2 border-red-500 rotate-45 transition-transform duration-300 group-hover:rotate-[225deg]" />
               <div className="absolute inset-0 bg-red-500/0 group-hover:bg-red-500/5 transition-colors duration-200" />
             </div>
@@ -144,20 +207,25 @@ export default function SANavbar() {
           </button>
 
           {/* ── CENTER NAV (desktop) ─────────────────────── */}
-          <nav className="hidden lg:flex flex-1 justify-center" aria-label="Main navigation">
+          <nav
+            className="hidden lg:flex flex-1 justify-center"
+            aria-label="Main navigation"
+          >
             <div className="flex items-center gap-0.5">
-              {NAV_ITEMS.map(item => {
+              {NAV_ITEMS.map((item) => {
                 const active = isActive(item.to);
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
+                     onClick={closeMenus}
                     className={`
                       relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg
                       text-sm font-medium transition-all duration-150
-                      ${active
-                        ? "text-foreground bg-muted"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      ${
+                        active
+                          ? "text-foreground bg-muted"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       }
                     `}
                   >
@@ -179,7 +247,6 @@ export default function SANavbar() {
 
           {/* ── RIGHT ACTIONS ────────────────────────────── */}
           <div className="flex items-center gap-2 ml-auto">
-
             {/* market pulse indicator */}
             {/* <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
               <span className="relative flex h-2 w-2">
@@ -200,21 +267,25 @@ export default function SANavbar() {
                 transition-all duration-150
               "
             >
-              {theme === "dark"
-                ? <Sun  size={15} className="text-yellow-400" />
-                : <Moon size={15} className="text-slate-600"  />}
+              {theme === "dark" ? (
+                <Sun size={15} className="text-yellow-400" />
+              ) : (
+                <Moon size={15} className="text-slate-600" />
+              )}
             </button>
 
             {/* ── PROFILE DROPDOWN ─────────────────────── */}
             <div className="relative hidden md:block" ref={profileRef}>
               <button
-                onClick={() => setProfileOpen(p => !p)}
+                onClick={() => setProfileOpen((p) => !p)}
                 className={`
                   flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl
                   border transition-all duration-150
-                  ${profileOpen
-                    ? "bg-muted border-border"
-                    : "bg-card border-border hover:bg-muted"}
+                  ${
+                    profileOpen
+                      ? "bg-muted border-border"
+                      : "bg-card border-border hover:bg-muted"
+                  }
                 `}
               >
                 {/* avatar */}
@@ -222,7 +293,7 @@ export default function SANavbar() {
                   {user?.username?.[0]?.toUpperCase() ?? "U"}
                 </div>
                 <span className="text-sm font-medium text-foreground max-w-[80px] truncate">
-                  {user?.username ??  ""}
+                  {user?.username ?? ""}
                 </span>
                 <ChevronDown
                   size={14}
@@ -232,16 +303,17 @@ export default function SANavbar() {
 
               {/* dropdown */}
               {profileOpen && (
-                <div className="
+                <div
+                  className="
                   absolute right-0 top-[calc(100%+8px)] w-52
                   bg-card backdrop-blur-md border border-border rounded-2xl
                   shadow-[0_8px_32px_rgba(0,0,0,0.12)]
                   dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
                   overflow-hidden
                   animate-in fade-in slide-in-from-top-2 duration-150
-                ">
+                "
+                >
                   {/* user info header */}
-
 
                   {/* <div className="px-4 py-3 border-b border-border bg-muted/40">
                     <p className="text-sm font-semibold truncate">{user?.username ?? "—"}</p>
@@ -252,8 +324,11 @@ export default function SANavbar() {
                     <DropdownItem
                       icon={<User size={14} />}
                       label="My Profile"
-                        // onClick={() => navigate({ to: "/admin/profile" })}
-                      onClick={() => { setProfileOpen(false); navigate({ to: "/admin/profile" }); }}
+                      // onClick={() => navigate({ to: "/admin/profile" })}
+                      onClick={() => {
+                        closeMenus();
+                        navigate({ to: "/admin/profile" });
+                      }}
                     />
                     {/* <DropdownItem
                       icon={<TrendingUp size={14} />}
@@ -264,7 +339,10 @@ export default function SANavbar() {
 
                   <div className="p-1.5 border-t border-border">
                     <button
-                      onClick={() => { setProfileOpen(false); handleLogout(); }}
+                      onClick={() => {
+                        closeMenus();
+                        handleLogout();
+                      }}
                       disabled={logoutMutation.isPending}
                       className="
                         w-full flex items-center gap-2.5 px-3 py-2 rounded-xl
@@ -283,18 +361,23 @@ export default function SANavbar() {
 
             {/* mobile hamburger */}
             <button
-onClick={(e) => {
-    e.stopPropagation();
-    setMobileOpen((prev) => !prev);
-  }}              aria-label="Toggle mobile menu"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMobileOpen((prev) => !prev);
+              }}
+              aria-label="Toggle mobile menu"
               aria-expanded={mobileOpen}
               className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-border bg-card hover:bg-muted transition-colors duration-150"
             >
               <div className="relative w-4 h-4">
-                <span className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-100 rotate-0" : "opacity-0 rotate-90"}`}>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-100 rotate-0" : "opacity-0 rotate-90"}`}
+                >
                   <X size={16} />
                 </span>
-                <span className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-0 -rotate-90" : "opacity-100 rotate-0"}`}>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${mobileOpen ? "opacity-0 -rotate-90" : "opacity-100 rotate-0"}`}
+                >
                   <Menu size={16} />
                 </span>
               </div>
@@ -306,7 +389,7 @@ onClick={(e) => {
       {/* ══ MOBILE MENU ════════════════════════════════════ */}
       {/* backdrop */}
       <div
-        onClick={() => setMobileOpen(false)}
+        onClick={closeMenus}
         className={`
           fixed inset-0 z-40 bg-black/40 backdrop-blur-sm
           transition-opacity duration-200 lg:hidden
@@ -324,14 +407,15 @@ onClick={(e) => {
         `}
       >
         <div className="mx-3 mt-2 rounded-2xl border border-border bg-card/98 backdrop-blur-xl shadow-2xl overflow-hidden">
-
           {/* user strip */}
           <div className="flex items-center gap-3 px-4 py-4 border-b border-border bg-muted/30">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold flex-shrink-0">
               {user?.username?.[0]?.toUpperCase() ?? "U"}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{user?.username ?? "User"}</p>
+              <p className="text-sm font-semibold truncate">
+                {user?.username ?? "User"}
+              </p>
               {/* <p className="text-xs text-muted-foreground capitalize">{user?.role ?? "user"}</p> */}
             </div>
             {/* inline theme in mobile */}
@@ -353,14 +437,16 @@ onClick={(e) => {
                 <Link
                   key={item.to}
                   to={item.to}
-                  onClick={() => setMobileOpen(false)}
+onClick={closeMenus}
                   style={{ animationDelay: `${idx * 40}ms` }}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
                     transition-all duration-150
-                    ${active
-                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                      : "text-foreground/80 hover:text-foreground hover:bg-muted"}
+                    ${
+                      active
+                        ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                        : "text-foreground/80 hover:text-foreground hover:bg-muted"
+                    }
                   `}
                 >
                   <item.icon
@@ -379,7 +465,10 @@ onClick={(e) => {
           {/* bottom actions */}
           <div className="p-2 border-t border-border space-y-1 pb-3">
             <button
-              onClick={() => { setMobileOpen(false); navigate({ to: "/admin/profile" }); }}
+              onClick={() => {
+                closeMenus();
+                navigate({ to: "/admin/profile" });
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm hover:bg-muted transition-colors duration-150"
             >
               <User size={16} className="text-muted-foreground" />
@@ -387,7 +476,10 @@ onClick={(e) => {
             </button>
 
             <button
-              onClick={() => { setMobileOpen(false); handleLogout(); }}
+              onClick={() => {
+                closeMenus();
+                handleLogout();
+              }}
               disabled={logoutMutation.isPending}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 font-medium transition-colors duration-150 disabled:opacity-50"
             >
@@ -417,8 +509,14 @@ onClick={(e) => {
 
 /* ─── DROPDOWN ITEM ──────────────────────────────────────── */
 function DropdownItem({
-  icon, label, onClick,
-}: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -433,5 +531,3 @@ function DropdownItem({
     </button>
   );
 }
-
- 

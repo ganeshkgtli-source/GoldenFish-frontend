@@ -35,7 +35,7 @@ export default function Profile() {
   const [showNew,     setShowNew]     = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
-  const [canResend,   setCanResend]   = useState(false);
+const canResend = resendTimer <= 0;
 
   /* password strength */
   const isStrong =
@@ -48,14 +48,15 @@ export default function Profile() {
   const isPrefixMatch = !!confirmPassword && newPassword.startsWith(confirmPassword);
 
   /* countdown */
-  useEffect(() => {
-    if (resendTimer > 0) {
-      const t = setTimeout(() => setResendTimer((n) => n - 1), 1000);
-      return () => clearTimeout(t);
-    } else {
-      setCanResend(true);
-    }
-  }, [resendTimer]);
+ useEffect(() => {
+  if (resendTimer <= 0) return;
+
+  const t = setTimeout(() => {
+    setResendTimer((n) => n - 1);
+  }, 1000);
+
+  return () => clearTimeout(t);
+}, [resendTimer]);
 
   /* ─── MUTATIONS ──────────────────────────────────────── */
 
@@ -131,8 +132,10 @@ export default function Profile() {
   const handleResendOtp = () => {
     if (!canResend) return;
     sendOtpMutation.mutate(undefined, {
-      onSuccess: () => { toast.success("OTP resent successfully 📩"); setResendTimer(60); setCanResend(false); },
-      onError: () => { toast.error("Failed to resend OTP ❌"); },
+onSuccess: () => {
+  toast.success("OTP resent successfully 📩");
+  setResendTimer(60);
+},      onError: () => { toast.error("Failed to resend OTP ❌"); },
     });
   };
 
