@@ -16,6 +16,7 @@ import MarketClock from "../components/MarketClock";
 import WatchlistSidebar from "../components/WatchlistSidebar";
 import SectorPerformance from "../components/SectorPerformance";
 import Footer from "../components/Footer";
+ 
 
 const holdingsData = [
   {
@@ -360,7 +361,7 @@ return (
       </div>
     </section>
   </main>
-  <Footer></Footer>
+  <Footer ></Footer>
 </div>
 );
 }

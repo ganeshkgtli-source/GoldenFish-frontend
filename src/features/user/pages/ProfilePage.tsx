@@ -10,7 +10,7 @@ import {
   useSendOtp,
   useVerifyOtpPassword,
   useUpdateApi,
-} from "@/client/hooks/useProfile";
+} from "@/features/user/hooks/useProfile";
 import {
   User,
   Mail,
@@ -34,7 +34,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Navbar from "../components/NavBar";
 import Footer from "../components/Footer";
-
+ 
 /* ─── TYPES ───────────────────────────────────────────────── */
 
 type PasswordFieldProps = {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMarketData } from "@/client/hooks/useProfile";
+import { useMarketData } from "@/features/user/hooks/useProfile";
 
 type Stock = {
   name: string;
