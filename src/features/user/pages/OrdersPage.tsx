@@ -1,12 +1,13 @@
 import { useState } from "react";
 import Navbar from "../components/NavBar";
-
+import TradeBook from "../components/orders/TradeBook";
+import OrderBook from "../components/orders/OrderBook";
+import Ledger from "../components/orders/Ledger";
+import Reports from "../components/orders/Reports";
  
 
- import OrderBook from "@/client/components/orders/OrderBook";
-import Ledger from "@/client/components/orders/Ledger";
-import Reports from "@/client/components/orders/Reports";
-import TradeBook from "../components/orders/TradeBook";
+ 
+ 
 
 const tabs = [
   {

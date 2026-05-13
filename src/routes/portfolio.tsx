@@ -1,5 +1,5 @@
  
-import PortfolioPage from "@/client/pages/PortfolioPage";
+import PortfolioPage from "@/features/user/pages/PortfolioPage";
  import { requireAuth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";
 

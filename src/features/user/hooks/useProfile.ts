@@ -6,7 +6,7 @@ import {
   sendOtp,
   verifyOtpPassword,
   getMarketData,
-} from "@/client/api/profileApi";
+} from "@/features/user/api/profileApi";
 
 /* ================= PROFILE ================= */
 export const useProfile = () => {

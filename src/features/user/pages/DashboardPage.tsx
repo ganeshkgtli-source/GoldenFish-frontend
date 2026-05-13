@@ -1,4 +1,4 @@
-import Navbar from "../components/NavBar";
+ 
 import WatchlistSidebar from "../components/WatchlistSidebar";
 import StatsCards from "../components/StatsCards";
 import TodaysOrders from "../components/TodaysOrders";
@@ -9,6 +9,7 @@ import { X, ShieldAlert } from "lucide-react";
  import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
+import Navbar from "../components/NavBar";
 
 export default function DashboardPage() {
   const navigate = useNavigate();

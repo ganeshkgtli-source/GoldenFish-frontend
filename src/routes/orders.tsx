@@ -1,5 +1,5 @@
  
-import OrdersPage from "@/client/pages/OrdersPage";
+import OrdersPage from "@/features/user/pages/OrdersPage";
   import { requireAuth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";
 
