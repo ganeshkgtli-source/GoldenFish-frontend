@@ -1,5 +1,5 @@
  
- import PositionsPage from "@/client/pages/PositionsPage";
+ import PositionsPage from "@/features/user/pages/PositionsPage";
   import { requireAuth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";
 

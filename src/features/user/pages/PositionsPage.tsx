@@ -10,10 +10,11 @@ import {
   Wallet,
   BarChart3,
 } from "lucide-react";
-import Navbar from "../components/NavBar";
 import MarketClock from "../components/MarketClock";
 import WatchlistSidebar from "../components/WatchlistSidebar";
 import SectorPerformance from "../components/SectorPerformance";
+import Navbar from "../components/NavBar";
+ 
  
 
 const positionsData = [

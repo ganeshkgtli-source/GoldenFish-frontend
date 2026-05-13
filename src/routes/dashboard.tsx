@@ -1,4 +1,4 @@
-import DashboardPage from "@/client/pages/DashboardPage";
+import DashboardPage from "@/features/user/pages/DashboardPage";
 // import HomePage from "@/features/home/pages/HomePage";
 import { requireAuth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";

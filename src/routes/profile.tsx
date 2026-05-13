@@ -1,4 +1,4 @@
-import ProfilePage from "@/client/pages/ProfilePage";
+import ProfilePage from "@/features/user/pages/ProfilePage";
 import { requireAuth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";
 
