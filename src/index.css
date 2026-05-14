@@ -348,3 +348,36 @@
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0);
 }
+/* =========================
+   HIDE ALL SCROLLBARS
+========================= */
+
+/* Chrome, Edge, Safari */
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Chrome scrollbar track */
+.scrollbar-hide::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Chrome scrollbar thumb */
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Firefox */
+.scrollbar-hide {
+  scrollbar-width: none !important;
+}
+
+/* IE / Edge */
+.scrollbar-hide {
+  -ms-overflow-style: none !important;
+}

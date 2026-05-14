@@ -1,8 +1,3 @@
-// ============================================================
-// Profile.tsx — Full Trading Profile Page
-// Theme-based (dark/light), fully responsive, all fixes applied
-// ============================================================
-
 import { useEffect, useState } from "react";
 import {
   useProfile,
@@ -34,7 +29,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Navbar from "../components/NavBar";
 import Footer from "../components/Footer";
- 
+
 /* ─── TYPES ───────────────────────────────────────────────── */
 
 type PasswordFieldProps = {
@@ -82,7 +77,7 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
-const canResend = resendTimer <= 0;
+  const canResend = resendTimer <= 0;
   /* — Active section tab — */
   const [activeSection, setActiveSection] = useState<
     "overview" | "security" | "api" | "account"
@@ -114,15 +109,15 @@ const canResend = resendTimer <= 0;
     : 0;
 
   /* — OTP countdown — */
- useEffect(() => {
-  if (resendTimer <= 0) return;
+  useEffect(() => {
+    if (resendTimer <= 0) return;
 
-  const t = setTimeout(() => {
-    setResendTimer((n) => n - 1);
-  }, 1000);
+    const t = setTimeout(() => {
+      setResendTimer((n) => n - 1);
+    }, 1000);
 
-  return () => clearTimeout(t);
-}, [resendTimer]);
+    return () => clearTimeout(t);
+  }, [resendTimer]);
 
   /* ── HANDLERS ────────────────────────────────────────────── */
 
@@ -163,7 +158,7 @@ const canResend = resendTimer <= 0;
         toast.success("OTP sent to your email 📩");
         setStep("otp");
         setResendTimer(60);
-       },
+      },
       onError: (err: Error) => {
         toast.error(err.message || "Failed to send OTP");
       },
@@ -250,14 +245,14 @@ const canResend = resendTimer <= 0;
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg">
                     {isLoading
                       ? "?"
-                      : ( data?.user?.username?.[0]?.toUpperCase() ?? "U")}
+                      : (data?.user?.username?.[0]?.toUpperCase() ?? "U")}
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-card" />
                 </div>
 
                 <div className="min-w-0">
                   <h1 className="text-xl sm:text-2xl font-bold truncate">
-                    {isLoading ? "Loading…" : ( data?.user?.username ?? "—")}
+                    {isLoading ? "Loading…" : (data?.user?.username ?? "—")}
                   </h1>
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Mail size={13} className="flex-shrink-0" />
@@ -346,7 +341,7 @@ const canResend = resendTimer <= 0;
             {/* Profile Details */}
             <SectionCard title="Profile Details" icon={<User size={16} />}>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Full Name" value={ data?.user?.username} />
+                <Field label="Full Name" value={data?.user?.username} />
                 <Field label="Email" value={data?.user?.email} />
                 <Field label="Mobile" value={data?.user?.phone} />
                 <Field label="PAN" value="DZX****41M" />
@@ -629,8 +624,6 @@ const canResend = resendTimer <= 0;
                     setShow={setShowConfirm}
                     label="Confirm Password"
                   />
- 
- 
 
                   {/* <StrengthBars isStrong={isStrong} isPrefixMatch={isPrefixMatch} confirmPassword={confirmPassword} newPassword={newPassword} /> */}
                   <StrengthBars

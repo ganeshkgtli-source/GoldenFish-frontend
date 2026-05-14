@@ -29,7 +29,7 @@ export const getProfile = async (): Promise<ProfileResponse> => {
   const res = await api.get(
     "/profile/"
   );
-
+console.log("PROFILE RESPONSE:", res.data);
   return res.data.data;
 };
 
@@ -71,24 +71,3 @@ export const verifyOtpPassword = async (data: {
 
 
  
-
-export type MarketSymbol = {
-  security_id: string;
-
-  SYMBOL_NAME: string;
-
-};
-
-export type MarketDataResponse = {
-  data: MarketSymbol[];
-};
-
-export const getMarketData =
-  async (): Promise<MarketDataResponse> => {
-
-    const res = await api.get(
-      "/marketdata/"
-    );
-console.log("MARKET DATA RESPONSE:", res.data);
-    return res.data;
-  };
