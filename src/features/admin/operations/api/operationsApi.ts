@@ -30,7 +30,8 @@ export type ApiResponse = {
 export const operationsApi = {
   getProfile: async (): Promise<ProfileResponse> => {
     const { data } = await api.get("profile/");
-    return data;
+    console.log("PROFILE RESPONSE:", data.data);
+    return data.data;
   },
 
   changePassword: async (

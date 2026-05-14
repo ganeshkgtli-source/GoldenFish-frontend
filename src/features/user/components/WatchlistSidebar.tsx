@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMarketData } from "@/features/user/hooks/useProfile";
+import { useMarketData } from "../hooks/useMarketData";
 
 type Stock = {
   name: string;
@@ -12,6 +12,7 @@ type MarketSymbol = {
   SYMBOL_NAME?: string;
   security_id: string;
 };
+
 export default function WatchlistSidebar() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [query, setQuery] = useState("");
@@ -20,11 +21,16 @@ export default function WatchlistSidebar() {
     // isLoading,
     // error,
   } = useMarketData();
+ 
 
 const initialStocks = useMemo<
   Stock[]
 >(() => {
-  if (!marketData?.data) {
+  if (
+    !Array.isArray(
+      marketData?.data
+    )
+  ) {
     return [];
   }
 
@@ -43,6 +49,7 @@ const initialStocks = useMemo<
     })
   );
 }, [marketData]);
+
 
 useEffect(() => {
   if (
