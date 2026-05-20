@@ -1,10 +1,22 @@
+import { Suspense, lazy } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
- import { requireAdmin } from "@/lib/auth";
-import SuperAdminDashboardPage from "@/features/admin/strategy/pages/DashboardPage";
+
+import PageLoader from "@/components/PageLoader";
+import { requireAdmin } from "@/lib/auth";
+
+const SuperAdminDashboardPage = lazy(() =>
+  import("@/features/admin/strategy/pages/DashboardPage"),
+);
 
 export const Route = createFileRoute("/super-admin/dashboard")({
-   beforeLoad: () => {
-    requireAdmin(); // ✅ THIS WAS MISSING
+  beforeLoad: () => {
+    requireAdmin();
   },
-  component: SuperAdminDashboardPage,
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <SuperAdminDashboardPage />
+    </Suspense>
+  ),
 });
+

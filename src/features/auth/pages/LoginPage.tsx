@@ -8,6 +8,8 @@ import {
   Sparkles,
   EyeOff,
   Eye,
+  AlertTriangle,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -46,6 +48,8 @@ export default function LoginPage() {
   // ✅ MODAL STATE
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
+  const [showExpiryPopup, setShowExpiryPopup] =
+  useState(false);
 
   // ✅ COOLDOWN TIMER
   const [cooldown, setCooldown] = useState(0);
@@ -53,23 +57,219 @@ export default function LoginPage() {
  const setUser = useAuthStore((s) => s.setUser);
   /* ================= LOGIN ================= */
  
+// const handleSubmit = async (
+//   e: React.FormEvent
+// ) => {
+
+//   e.preventDefault()
+
+//   setError("")
+
+//   try {
+
+//     const res =
+//       await loginMutation.mutateAsync(form)
+
+//     console.log(
+//       "LOGIN RESPONSE:",
+//       res
+//     )
+
+//     // =================================================
+//     // EMAIL VERIFICATION FLOW
+//     // =================================================
+//     if (
+//       res?.email_verification_required
+//     ) {
+
+//       setEmail(
+//         res.email ||
+//         form.identifier
+//       )
+
+//       setShowOtp(true)
+
+//       setError("")
+
+//       return
+//     }
+
+//     // =================================================
+//     // TOKEN SAFETY CHECK
+//     // =================================================
+//     if (
+//       !res?.tokens?.access ||
+//       !res?.tokens?.refresh
+//     ) {
+
+//       setError(
+//         "Login failed. Please try again."
+//       )
+
+//       return
+//     }
+
+//     // =================================================
+//     // REMEMBER ME
+//     // =================================================
+//     localStorage.setItem(
+//       "rememberMe",
+//       rememberMe
+//         ? "true"
+//         : "false"
+//     )
+
+//     // =================================================
+//     // ROLE NORMALIZATION
+//     // =================================================
+//     const role =
+//       res.role
+//         ?.trim()
+//         .toLowerCase() ??
+//       "user"
+
+//     console.log(
+//       "ROLE RAW:",
+//       res.role
+//     )
+
+//     console.log(
+//       "ROLE NORMALIZED:",
+//       role
+//     )
+
+//     // =================================================
+//     // STORE USER
+//     // =================================================
+// setUser({
+
+//   username:
+//     res.username ?? "",
+
+//   email:
+//     res.email ?? "",
+
+//   role:
+//     normalizeRole(role),
+
+//   is_kyc_verified:
+//     res?.is_kyc_verified ?? false,
+// })
+
+ 
+
+//     // =================================================
+//     // DHAN REDIRECT
+//     // =================================================
+//     if (res.dhan_login_url) {
+
+//       console.log(
+//         "REDIRECTING TO DHAN..."
+//       )
+
+//       window.location.href =
+//         res.dhan_login_url
+
+//       return
+//     }
+
+//     // =================================================
+//     // ROLE-BASED NAVIGATION
+//     // =================================================
+//     if (
+//       role === "super_admin"
+//     ) {
+
+//       navigate({
+//         to:
+//           "/super-admin/dashboard",
+
+//         replace: true,
+//       })
+
+//       return
+//     }
+
+//     if (role === "admin") {
+
+//       navigate({
+//         to:
+//           "/admin/dashboard",
+
+//         replace: true,
+//       })
+
+//       return
+//     }
+
+//     // =================================================
+//     // BACKEND REDIRECT
+//     // =================================================
+//     if (res.redirect_to) {
+
+//       navigate({
+//         to:
+//           res.redirect_to,
+
+//         replace: true,
+//       })
+
+//       return
+//     }
+
+//     // =================================================
+//     // DEFAULT FALLBACK
+//     // =================================================
+//     navigate({
+//       to: "/dashboard",
+//       replace: true,
+//     })
+
+//   } catch (err: unknown) {
+
+//   console.error(err);
+
+//   const msg = parseError(err);
+
+//   // =================================================
+//   // EMAIL NOT VERIFIED
+//   // =================================================
+//   if (
+//     msg.toLowerCase().includes("verify")
+//   ) {
+
+//     setEmail(form.identifier);
+
+//     setShowOtp(true);
+
+//     setError("");
+
+//     return;
+//   }
+
+//   // =================================================
+//   // NORMAL ERRORS
+//   // =================================================
+//   setError(msg || "Invalid credentials");
+// }
+// }
 const handleSubmit = async (
   e: React.FormEvent
 ) => {
 
-  e.preventDefault()
+  e.preventDefault();
 
-  setError("")
+  setError("");
 
   try {
 
     const res =
-      await loginMutation.mutateAsync(form)
+      await loginMutation.mutateAsync(form);
 
     console.log(
       "LOGIN RESPONSE:",
       res
-    )
+    );
 
     // =================================================
     // EMAIL VERIFICATION FLOW
@@ -81,13 +281,13 @@ const handleSubmit = async (
       setEmail(
         res.email ||
         form.identifier
-      )
+      );
 
-      setShowOtp(true)
+      setShowOtp(true);
 
-      setError("")
+      setError("");
 
-      return
+      return;
     }
 
     // =================================================
@@ -100,9 +300,9 @@ const handleSubmit = async (
 
       setError(
         "Login failed. Please try again."
-      )
+      );
 
-      return
+      return;
     }
 
     // =================================================
@@ -113,7 +313,7 @@ const handleSubmit = async (
       rememberMe
         ? "true"
         : "false"
-    )
+    );
 
     // =================================================
     // ROLE NORMALIZATION
@@ -122,37 +322,47 @@ const handleSubmit = async (
       res.role
         ?.trim()
         .toLowerCase() ??
-      "user"
+      "user";
 
     console.log(
       "ROLE RAW:",
       res.role
-    )
+    );
 
     console.log(
       "ROLE NORMALIZED:",
       role
-    )
+    );
 
     // =================================================
     // STORE USER
     // =================================================
-setUser({
+    setUser({
 
-  username:
-    res.username ?? "",
+      username:
+        res.username ?? "",
 
-  email:
-    res.email ?? "",
+      email:
+        res.email ?? "",
 
-  role:
-    normalizeRole(role),
+      role:
+        normalizeRole(role),
 
-  is_kyc_verified:
-    res?.is_kyc_verified ?? false,
-})
+      is_kyc_verified:
+        res?.is_kyc_verified ?? false,
+    });
 
- 
+    // =================================================
+    // API EXPIRY POPUP
+    // =================================================
+    if (
+      res?.expiry_within_30_days
+    ) {
+
+      setShowExpiryPopup(true);
+
+      return;
+    }
 
     // =================================================
     // DHAN REDIRECT
@@ -161,12 +371,12 @@ setUser({
 
       console.log(
         "REDIRECTING TO DHAN..."
-      )
+      );
 
       window.location.href =
-        res.dhan_login_url
+        res.dhan_login_url;
 
-      return
+      return;
     }
 
     // =================================================
@@ -181,9 +391,9 @@ setUser({
           "/super-admin/dashboard",
 
         replace: true,
-      })
+      });
 
-      return
+      return;
     }
 
     if (role === "admin") {
@@ -193,9 +403,9 @@ setUser({
           "/admin/dashboard",
 
         replace: true,
-      })
+      });
 
-      return
+      return;
     }
 
     // =================================================
@@ -208,9 +418,9 @@ setUser({
           res.redirect_to,
 
         replace: true,
-      })
+      });
 
-      return
+      return;
     }
 
     // =================================================
@@ -219,36 +429,43 @@ setUser({
     navigate({
       to: "/dashboard",
       replace: true,
-    })
+    });
 
   } catch (err: unknown) {
 
-  console.error(err);
+    console.error(err);
 
-  const msg = parseError(err);
+    const msg = parseError(err);
 
-  // =================================================
-  // EMAIL NOT VERIFIED
-  // =================================================
-  if (
-    msg.toLowerCase().includes("verify")
-  ) {
+    // =================================================
+    // EMAIL NOT VERIFIED
+    // =================================================
+    if (
+      msg
+        .toLowerCase()
+        .includes("verify")
+    ) {
 
-    setEmail(form.identifier);
+      setEmail(
+        form.identifier
+      );
 
-    setShowOtp(true);
+      setShowOtp(true);
 
-    setError("");
+      setError("");
 
-    return;
+      return;
+    }
+
+    // =================================================
+    // NORMAL ERRORS
+    // =================================================
+    setError(
+      msg ||
+      "Invalid credentials"
+    );
   }
-
-  // =================================================
-  // NORMAL ERRORS
-  // =================================================
-  setError(msg || "Invalid credentials");
-}
-}
+};
   /* ================= VERIFY OTP ================= */
  const handleVerifyOtp = async (otp: string) => {
   if (!email) {
@@ -632,6 +849,182 @@ const handleResend = async () => {
             />
           )}
         </div>
+        {showExpiryPopup && (
+  <div
+    className="
+      fixed inset-0 z-[100]
+      flex items-center justify-center
+      bg-black/70 backdrop-blur-sm
+      px-4
+    "
+  >
+    <div
+      className="
+        w-full max-w-md
+        rounded-3xl
+        border border-red-500/20
+        bg-white dark:bg-slate-900
+        shadow-2xl
+        overflow-hidden
+        animate-in fade-in zoom-in-95
+      "
+    >
+      {/* HEADER */}
+      <div
+        className="
+          p-6
+          border-b border-border
+          bg-gradient-to-br
+          from-red-500/10
+          to-transparent
+        "
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="
+              h-12 w-12
+              rounded-2xl
+              bg-red-500/10
+              border border-red-500/20
+              flex items-center justify-center
+            "
+          >
+            <AlertTriangle
+              size={24}
+              className="text-red-500"
+            />
+          </div>
+
+          <div>
+            <h2
+              className="
+                text-lg font-bold
+                text-slate-900 dark:text-white
+              "
+            >
+              API Expiry Warning
+            </h2>
+
+            <p
+              className="
+                text-sm text-slate-500
+                dark:text-slate-400
+              "
+            >
+              Action required soon
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* BODY */}
+      <div className="p-6 space-y-4">
+        <div
+          className="
+            rounded-2xl
+            border border-red-500/10
+            bg-red-500/[0.03]
+            p-4
+          "
+        >
+          <p
+            className="
+              text-sm leading-relaxed
+              text-slate-700 dark:text-slate-300
+            "
+          >
+            Your broker API credentials are nearing
+            expiration. Please renew or regenerate
+            them to avoid interruption in automated
+            trading, strategy execution, and market
+            synchronization.
+          </p>
+        </div>
+
+        <div
+          className="
+            flex items-start gap-2
+            rounded-xl
+            bg-yellow-500/[0.05]
+            border border-yellow-500/10
+            p-3
+          "
+        >
+          <AlertCircle
+            size={16}
+            className="text-yellow-500 mt-0.5"
+          />
+
+          <p
+            className="
+              text-xs leading-relaxed
+              text-slate-600 dark:text-slate-400
+            "
+          >
+            Expired API credentials may stop
+            order execution and live market feeds.
+          </p>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div
+        className="
+          p-5
+          border-t border-border
+          flex gap-3
+        "
+      >
+        <button
+          onClick={() => {
+            setShowExpiryPopup(false);
+
+           navigate({
+  to: "/profile",
+  search: {
+    section: "api",
+    edit: true,
+  },
+});
+          }}
+          className="
+            flex-1
+            py-3
+            rounded-xl
+            bg-red-600
+            hover:bg-red-700
+            text-white
+            font-semibold
+            transition
+          "
+        >
+          Update API
+        </button>
+
+        <button
+          onClick={() => {
+            setShowExpiryPopup(false);
+
+            navigate({
+              to: "/dashboard",
+            });
+          }}
+          className="
+            flex-1
+            py-3
+            rounded-xl
+            border border-border
+            hover:bg-muted
+            font-medium
+            transition
+          "
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );

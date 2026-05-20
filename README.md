@@ -1,24 +1,50 @@
 # GoldenFish Frontend
 
 ## Overview
-This is a modern React Single Page Application (SPA) built with **Vite** (build tool), **TypeScript**, **TanStack Router** (file-based routing), **TanStack React Query** (data fetching/caching), **Tailwind CSS** (styling), **Zustand** (state management), and **Zod** + **React Hook Form** (form validation/handling). 
+GoldenFish Frontend is a modern React SPA that implements the currently active product stages: **authentication + KYC verification + authenticated user dashboards**. It is structured to support “process-based” flows (step-by-step UX) and transactional screens (trading/orders-related pages).
 
-The app focuses on **authentication features** (login, register with wizard/OTP verification) and a basic home page. It uses a custom API layer (Axios-based) likely connecting to a backend (e.g., Django from nearby paths). Development tools include ESLint, Prettier, Vitest/Playwright for testing, and PostCSS/Autoprefixer.
+This app is built with **Vite** (fast bundling), **TypeScript** (type-safe domain/data modeling), **TanStack Router** (file-based routing with generated route trees), **TanStack React Query** (server state caching/synchronization), **Tailwind CSS** (consistent utility-first styling), and **Zustand** (small client-side state like auth/session).
+
+The app uses a custom **Axios-based** API layer for consistent HTTP behavior and error handling. Development tooling includes **ESLint**, **Prettier**, **Vitest/Playwright**, and **PostCSS/Autoprefixer**.
 
 Key providers: Theme (dark/light mode), React Query, TanStack Router.
 
-### Tech Stack
-- **Framework**: React 19
-- **Build**: Vite 8
-- **Router**: @tanstack/react-router v1
-- **Data Fetching**: @tanstack/react-query v5
-- **State**: Zustand v5
-- **Forms**: react-hook-form v7 + @hookform/resolvers + Zod v4
-- **Styling**: Tailwind CSS v3 + clsx + tailwind-merge + lucide-react icons
-- **HTTP**: Axios
-- **Utils**: react-phone-number-input (for OTP/phone), DevTools
-- **Testing**: Vitest + jsdom + Testing Library + Playwright
-- **Lint/Format**: ESLint v9 + TypeScript ESLint + Prettier
+## “Process stage” mapping (why these technologies)
+The repository currently reflects a pipeline like this:
+
+1) **Entry & authentication stage**
+- **TanStack Router**: keeps route definitions colocated with features/pages, which is critical for multi-step flows like register/login.
+- **React Query mutations + hooks**: OTP/email verification and KYC submission are server mutations; React Query provides loading/error state and retries in a predictable way.
+- **Zustand**: stores the authenticated user/session snapshot (including flags like `is_kyc_verified`) so UI can synchronously gate access to protected screens.
+
+2) **KYC verification stage (the active “verification gate”)**
+- **Form handling**: the codebase uses a step-like UX pattern (file upload + identifiers). The chosen libraries support validation and controlled inputs.
+- **Axios + multipart/form-data**: KYC requires image uploads; Axios handles multipart payloads reliably with the correct headers.
+- **parseError()** in the auth API layer: normalizes backend error shapes into user-friendly strings, which reduces UX friction in verification.
+- **React Query onSuccess**: the KYC mutation updates auth state only when the backend confirms verification.
+
+3) **Post-KYC authenticated stage (user dashboards & trading screens)**
+- **React Query queries**: market data, orders, holdings, positions, etc. are server state that must be cached and refreshed safely.
+- **Query keys per resource**: enables independent invalidation/refetching for each widget/table without reloading the whole app.
+- **Tailwind**: consistent layout for data-dense screens (tables/cards) across pages.
+
+4) **Future extensibility stage (trading/operations/admin workflows)**
+- **TanStack Router file routing** makes it straightforward to add new admin operations and workflow pages without manually maintaining large route maps.
+- **Feature folder convention** (api/hooks/pages/components) keeps changes localized as workflows grow.
+
+### Tech Stack (what each is used for right now)
+- **Framework: React 19** — UI rendering and component composition.
+- **Build: Vite 8** — fast dev server + production bundling.
+- **Router: @tanstack/react-router v1** — file-based routing + generated route tree for multi-step flows.
+- **Data Fetching: @tanstack/react-query v5** — server-state queries/mutations with caching, invalidation, and retry behavior.
+- **State: Zustand v5** — lightweight client state (auth/session flags like KYC status).
+- **Forms: react-hook-form v7 + @hookform/resolvers + Zod v4** — structured validation for step-like forms.
+- **Styling: Tailwind CSS v3 + clsx + tailwind-merge + lucide-react** — consistent UI for dashboards/tables.
+- **HTTP: Axios** — reliable REST calls + multipart uploads (KYC images).
+- **Utils: react-phone-number-input** — phone/OTP UX in authentication steps.
+- **Testing: Vitest + jsdom + Testing Library + Playwright** — unit/integration + end-to-end coverage.
+- **Lint/Format: ESLint v9 + TypeScript ESLint + Prettier** — consistency and safe refactors.
+
 
 ## Getting Started
 1. Install dependencies: `npm install`

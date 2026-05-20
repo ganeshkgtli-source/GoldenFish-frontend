@@ -1,10 +1,22 @@
+import { Suspense, lazy } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
-import ManagementDashboardPage from "@/features/admin/operations/pages/ManagementDashboardPage";
+
+import PageLoader from "@/components/PageLoader";
 import { requireAdmin } from "@/lib/auth";
 
+const ManagementDashboardPage = lazy(() =>
+  import("@/features/admin/operations/pages/ManagementDashboardPage"),
+);
+
 export const Route = createFileRoute("/admin/dashboard")({
-   beforeLoad: () => {
-    requireAdmin(); // ✅ THIS WAS MISSING
+  beforeLoad: () => {
+    requireAdmin();
   },
-  component: ManagementDashboardPage,
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <ManagementDashboardPage />
+    </Suspense>
+  ),
 });
+

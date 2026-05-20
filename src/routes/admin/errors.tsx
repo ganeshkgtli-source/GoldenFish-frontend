@@ -1,10 +1,22 @@
+import { Suspense, lazy } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
- import { requireAdmin } from "@/lib/auth";
-import ErrorLogPage from "@/features/admin/operations/pages/ErrorLogsPage";
- 
+
+import PageLoader from "@/components/PageLoader";
+import { requireAdmin } from "@/lib/auth";
+
+const ErrorLogPage = lazy(() =>
+  import("@/features/admin/operations/pages/ErrorLogsPage"),
+);
+
 export const Route = createFileRoute("/admin/errors")({
   beforeLoad: () => {
-      requireAdmin(); // ✅ THIS WAS MISSING
-    },
-  component: ErrorLogPage,
+    requireAdmin();
+  },
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <ErrorLogPage />
+    </Suspense>
+  ),
 });
+

@@ -1,12 +1,21 @@
-import DashboardPage from "@/features/user/pages/DashboardPage";
-// import HomePage from "@/features/home/pages/HomePage";
-import { requireAuth } from "@/lib/auth";
+import { Suspense, lazy } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
 
+import PageLoader from "@/components/PageLoader";
+import { requireAuth } from "@/lib/auth";
+
+const DashboardPage = lazy(() =>
+  import("@/features/user/pages/DashboardPage")
+);
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
-      requireAuth();
-    },
-  component: DashboardPage,
+    requireAuth();
+  },
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <DashboardPage />
+    </Suspense>
+  ),
 });

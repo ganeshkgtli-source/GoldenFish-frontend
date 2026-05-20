@@ -19,7 +19,7 @@ export default function Footer() {
 
         {/* RIGHT */}
         <div className="text-sm text-muted">
-          Built with ❤️ for traders
+          Built with ❤️ for algo traders
         </div>
 
       </div>
