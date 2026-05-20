@@ -8,7 +8,7 @@ export const useOrders = () => {
     queryFn: getOrders,
 
     refetchOnWindowFocus: false,
-     refetchInterval:3000,
+    //  refetchInterval:1000,
 
     refetchOnReconnect: false,
 
@@ -54,7 +54,7 @@ export const useTrades = () => {
     refetchOnMount: true,
 
     refetchOnWindowFocus: false,
-     refetchInterval:3000,
+    //  refetchInterval:1000,
 
     staleTime: 0,
   });
@@ -67,7 +67,7 @@ export const useFundLimit = () => {
     queryFn: getFundLimit,
 
     refetchOnMount: true,
-    refetchInterval: 3000,
+    // refetchInterval: 1000,
 
     staleTime: 0,
   });
@@ -78,7 +78,7 @@ export const useOpenPositions = () => {
     queryKey: ["open-positions"],
 
     queryFn: getOpenPositions,
-    refetchInterval: 3000,
+    //  refetchInterval: 1000,
 
     refetchOnMount: true,
 
@@ -93,7 +93,7 @@ export const useHoldings = () => {
     queryFn: getHoldings,
 
     refetchOnMount: true,
-        refetchInterval: 3000,
+        // refetchInterval: 1000,
 
 
     staleTime: 0,

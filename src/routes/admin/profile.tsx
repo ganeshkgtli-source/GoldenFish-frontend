@@ -1,10 +1,22 @@
- import { createFileRoute } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
+
+import { createFileRoute } from "@tanstack/react-router";
+
+import PageLoader from "@/components/PageLoader";
 import { requireAdmin } from "@/lib/auth";
-import Profile from "@/features/admin/operations/pages/Profile";
+
+const Profile = lazy(() =>
+  import("@/features/admin/operations/pages/Profile"),
+);
 
 export const Route = createFileRoute("/admin/profile")({
   beforeLoad: () => {
-    requireAdmin(); // 🔐 only admin & super_admin
+    requireAdmin();
   },
-  component: Profile,
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <Profile />
+    </Suspense>
+  ),
 });
+

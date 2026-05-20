@@ -27,7 +27,7 @@ export type LoginResponse = {
   role: "ADMIN" | "SUPER_ADMIN" | "USER";
   redirect_to: string;
   dhan_login_url: string | null;
-
+expiry_within_30_days?: boolean;
   login_state?: string;
   is_kyc_verified?: boolean;
   email_verification_required?: boolean;

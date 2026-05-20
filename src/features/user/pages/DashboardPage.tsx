@@ -18,7 +18,7 @@ export default function DashboardPage() {
 
   const [popupDelay, setPopupDelay] = useState(3000);
 
-  console.log("USER:", user);
+  // console.log("USER:", user);
 
   useEffect(() => {
     if (user?.role?.toLowerCase() !== "user") return;

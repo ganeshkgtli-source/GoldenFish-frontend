@@ -18,6 +18,17 @@ import Card from "../components/Card";
 import ContentTable from "../components/ContentTable";
 import TableCard from "../components/TableCard";
 
+type Position = {
+  symbol: string;
+  company: string;
+  qty: number;
+  avg: number;
+  ltp: number;
+  pnl: number;
+  change: number;
+  type: "LONG" | "SHORT";
+};
+
 const positionsData = [
   {
     symbol: "RELIANCE",
@@ -40,61 +51,68 @@ const positionsData = [
     change: -1.24,
     type: "SHORT",
   },
+
+  {
+    symbol: "INFY",
+    company: "Infosys Ltd",
+    qty: 15,
+    avg: 1410,
+    ltp: 1488.45,
+    pnl: 1176.75,
+    change: 2.12,
+    type: "LONG",
+  },
+
+  {
+    symbol: "HDFCBANK",
+    company: "HDFC Bank",
+    qty: 8,
+    avg: 1565,
+    ltp: 1622.3,
+    pnl: 458.4,
+    change: 1.11,
+    type: "SHORT",
+  },
 ] satisfies Position[];
-type Position = {
-  symbol: string;
-  company: string;
-  qty: number;
-  avg: number;
-  ltp: number;
-  pnl: number;
-  change: number;
-  type: "LONG" | "SHORT";
-};
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat(
-    "en-IN",
-    {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }
-  ).format(value);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 export default function PositionsPage() {
-  const [query, setQuery] =
-    useState("");
+  const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    return positionsData.filter(
+  const openPositions = useMemo(() => {
+    return positionsData.filter((item) => item.type === "LONG");
+  }, []);
+
+  const closedPositions = useMemo(() => {
+    return positionsData.filter((item) => item.type === "SHORT");
+  }, []);
+
+  const filteredOpenPositions = useMemo(() => {
+    return openPositions.filter(
       (item) =>
-        item.symbol
-          .toLowerCase()
-          .includes(
-            query.toLowerCase()
-          ) ||
-        item.company
-          .toLowerCase()
-          .includes(
-            query.toLowerCase()
-          )
+        item.symbol.toLowerCase().includes(query.toLowerCase()) ||
+        item.company.toLowerCase().includes(query.toLowerCase()),
     );
-  }, [query]);
+  }, [query, openPositions]);
 
-  const totalPnl =
-    positionsData.reduce(
-      (acc, p) => acc + p.pnl,
-      0
+  const filteredClosedPositions = useMemo(() => {
+    return closedPositions.filter(
+      (item) =>
+        item.symbol.toLowerCase().includes(query.toLowerCase()) ||
+        item.company.toLowerCase().includes(query.toLowerCase()),
     );
+  }, [query, closedPositions]);
 
-  const totalValue =
-    positionsData.reduce(
-      (acc, p) =>
-        acc + p.qty * p.ltp,
-      0
-    );
+  const totalPnl = positionsData.reduce((acc, p) => acc + p.pnl, 0);
+
+  const totalValue = positionsData.reduce((acc, p) => acc + p.qty * p.ltp, 0);
 
   const columns = [
     {
@@ -103,7 +121,6 @@ export default function PositionsPage() {
 
       render: (position: Position) => (
         <div className="flex items-center gap-3">
-
           <div
             className="
               w-10 h-10
@@ -114,22 +131,14 @@ export default function PositionsPage() {
               font-bold text-sm
             "
           >
-            {position.symbol.slice(
-              0,
-              2
-            )}
+            {position.symbol.slice(0, 2)}
           </div>
 
           <div>
-            <p className="font-semibold">
-              {position.symbol}
-            </p>
+            <p className="font-semibold">{position.symbol}</p>
 
-            <p className="text-xs text-muted-foreground">
-              {position.company}
-            </p>
+            <p className="text-xs text-muted-foreground">{position.company}</p>
           </div>
-
         </div>
       ),
     },
@@ -146,8 +155,7 @@ export default function PositionsPage() {
             rounded-full
             text-xs font-semibold
             ${
-              position.type ===
-              "LONG"
+              position.type === "LONG"
                 ? "bg-emerald-500/10 text-emerald-500"
                 : "bg-red-500/10 text-red-500"
             }
@@ -168,11 +176,7 @@ export default function PositionsPage() {
       title: "Avg",
 
       render: (position: Position) => (
-        <span>
-          {formatCurrency(
-            position.avg
-          )}
-        </span>
+        <span>{formatCurrency(position.avg)}</span>
       ),
     },
 
@@ -181,11 +185,7 @@ export default function PositionsPage() {
       title: "LTP",
 
       render: (position: Position) => (
-        <span className="font-semibold">
-          {formatCurrency(
-            position.ltp
-          )}
-        </span>
+        <span className="font-semibold">{formatCurrency(position.ltp)}</span>
       ),
     },
 
@@ -208,19 +208,11 @@ export default function PositionsPage() {
           `}
         >
           {position.change >= 0 ? (
-            <ArrowUpRight
-              size={12}
-            />
+            <ArrowUpRight size={12} />
           ) : (
-            <ArrowDownRight
-              size={12}
-            />
+            <ArrowDownRight size={12} />
           )}
-
-          {Math.abs(
-            position.change
-          )}
-          %
+          {Math.abs(position.change)}%
         </span>
       ),
     },
@@ -230,24 +222,18 @@ export default function PositionsPage() {
       title: "P&L",
 
       render: (position: Position) => {
-        const isProfit =
-          position.pnl >= 0;
+        const isProfit = position.pnl >= 0;
 
         return (
           <span
             className={`
               font-bold
-              ${
-                isProfit
-                  ? "text-emerald-500"
-                  : "text-red-500"
-              }
+              ${isProfit ? "text-emerald-500" : "text-red-500"}
             `}
           >
             {isProfit ? "+" : ""}
-            {formatCurrency(
-              position.pnl
-            )}
+
+            {formatCurrency(position.pnl)}
           </span>
         );
       },
@@ -256,7 +242,6 @@ export default function PositionsPage() {
 
   return (
     <AppLayout>
-
       {/* STATS */}
       <div
         className="
@@ -266,24 +251,17 @@ export default function PositionsPage() {
           gap-4
         "
       >
-
         <Card
           title="Open Positions"
-          value={String(
-            positionsData.length
-          )}
-          change={`${positionsData.length} active positions`}
-          icon={
-            <Briefcase size={20} />
-          }
+          value={String(openPositions.length)}
+          change={`${openPositions.length} active positions`}
+          icon={<Briefcase size={20} />}
           color="blue"
         />
 
         <Card
           title="Position Value"
-          value={formatCurrency(
-            totalValue
-          )}
+          value={formatCurrency(totalValue)}
           change="Current market exposure"
           icon={<Wallet size={20} />}
           color="purple"
@@ -291,102 +269,121 @@ export default function PositionsPage() {
 
         <Card
           title="Total P&L"
-          value={formatCurrency(
-            totalPnl
-          )}
+          value={formatCurrency(totalPnl)}
           change={
             totalPnl >= 0
-              ? `+${formatCurrency(
-                  totalPnl
-                )} profit`
-              : `${formatCurrency(
-                  totalPnl
-                )} loss`
+              ? `+${formatCurrency(totalPnl)} profit`
+              : `${formatCurrency(totalPnl)} loss`
           }
-          icon={
-            <TrendingUp size={20} />
-          }
-          color={
-            totalPnl >= 0
-              ? "green"
-              : "orange"
-          }
+          icon={<TrendingUp size={20} />}
+          color={totalPnl >= 0 ? "green" : "orange"}
         />
 
         <Card
           title="Margin Used"
           value="₹48,500"
           change="+2.1% today"
-          icon={
-            <IndianRupee size={20} />
-          }
+          icon={<IndianRupee size={20} />}
           color="orange"
         />
-
       </div>
 
-      {/* TABLE */}
-      <TableCard
-        title="Open Positions"
-        subtitle="Monitor your active trades and P&L."
-        actions={
-          <div className="relative w-full lg:w-[300px]">
+      {/* TABLES */}
+      <div className="space-y-6">
+        {/* OPEN POSITIONS */}
+        <TableCard
+          title="Open Positions"
+          subtitle="Monitor your active trades and P&L."
+          actions={
+            <div className="relative w-full lg:w-[300px]">
+              <Search
+                size={14}
+                className="
+                  absolute left-3 top-1/2
+                  -translate-y-1/2
+                  text-muted-foreground
+                "
+              />
 
-            <Search
-              size={14}
-              className="
-                absolute left-3 top-1/2
-                -translate-y-1/2
-                text-muted-foreground
-              "
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search positions..."
+                className="
+                  wizard-input
+                  h-10 w-full
+                  rounded-xl
+                  border border-border
+                  bg-background
+                  pl-9 pr-4
+                  text-sm
+                  outline-none
+                  focus:ring-2
+                  focus:ring-primary/20
+                "
+              />
+            </div>
+          }
+        >
+          <ContentTable
+            columns={columns}
+            data={filteredOpenPositions}
+            emptyText="No open positions"
+            minWidth="1000px"
+          />
+        </TableCard>
 
-            <input
-              value={query}
-              onChange={(e) =>
-                setQuery(
-                  e.target.value
-                )
-              }
-              placeholder="Search positions..."
-              className="
-                h-10 w-full
-                rounded-xl
-                border border-border
-                bg-background
-                pl-9 pr-4
-                text-sm
-                outline-none
-                focus:ring-2
-                focus:ring-primary/20
-              "
-            />
+        {/* CLOSED POSITIONS */}
+        <TableCard
+          title="Closed Positions"
+          subtitle="Completed and exited trades."  actions={
+            <div className="relative w-full lg:w-[300px]">
+              <Search
+                size={14}
+                className="
+                  absolute left-3 top-1/2
+                  -translate-y-1/2
+                  text-muted-foreground
+                "
+              />
 
-          </div>
-        }
-      >
-
-        <ContentTable
-          columns={columns}
-          data={filtered}
-          emptyText="No positions found"
-          minWidth="1000px"
-        />
-
-      </TableCard>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search positions..."
+                className="
+                  wizard-input
+                  h-10 w-full
+                  rounded-xl
+                  border border-border
+                  bg-background
+                  pl-9 pr-4
+                  text-sm
+                  outline-none
+                  focus:ring-2
+                  focus:ring-primary/20
+                "
+              />
+            </div>
+          }
+          
+        >
+          <ContentTable
+            columns={columns}
+            data={filteredClosedPositions}
+            emptyText="No closed positions"
+            minWidth="1000px"
+          />
+        </TableCard>
+      </div>
 
       {/* BOTTOM CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
         {/* ANALYTICS */}
         <div className="rounded-2xl border border-border bg-card p-5">
-
           <div className="flex items-center justify-between">
-
             <div>
-              <h3 className="text-lg font-semibold">
-                Position Analytics
-              </h3>
+              <h3 className="text-lg font-semibold">Position Analytics</h3>
 
               <p className="text-sm text-muted-foreground mt-1">
                 Trading performance insights
@@ -404,23 +401,19 @@ export default function PositionsPage() {
             >
               <BarChart3 size={20} />
             </div>
-
           </div>
 
           <div className="mt-6 space-y-5">
-
             {[
               {
                 label: "Win Rate",
                 value: "74%",
                 pct: "74%",
-                color:
-                  "bg-emerald-500",
+                color: "bg-emerald-500",
               },
 
               {
-                label:
-                  "Profit Ratio",
+                label: "Profit Ratio",
                 value: "58%",
                 pct: "58%",
                 color: "bg-blue-500",
@@ -430,80 +423,57 @@ export default function PositionsPage() {
                 label: "Risk Level",
                 value: "Moderate",
                 pct: "42%",
-                color:
-                  "bg-yellow-500",
+                color: "bg-yellow-500",
               },
             ].map((item) => (
               <div key={item.label}>
-
                 <div className="flex items-center justify-between mb-2">
-
                   <span className="text-sm text-muted-foreground">
                     {item.label}
                   </span>
 
-                  <span className="text-sm font-semibold">
-                    {item.value}
-                  </span>
-
+                  <span className="text-sm font-semibold">{item.value}</span>
                 </div>
 
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
-
                   <div
                     className={`${item.color} h-full rounded-full`}
                     style={{
                       width: item.pct,
                     }}
                   />
-
                 </div>
-
               </div>
             ))}
-
           </div>
-
         </div>
 
         {/* RECENT TRADES */}
         <div className="rounded-2xl border border-border bg-card p-5">
-
           <div className="flex items-center justify-between">
-
             <div>
-              <h3 className="text-lg font-semibold">
-                Recent Trades
-              </h3>
+              <h3 className="text-lg font-semibold">Recent Trades</h3>
 
               <p className="text-sm text-muted-foreground mt-1">
                 Latest executed positions
               </p>
             </div>
 
-            <Clock3
-              size={20}
-              className="text-muted-foreground"
-            />
-
+            <Clock3 size={20} className="text-muted-foreground" />
           </div>
 
           <div className="mt-6 space-y-5">
-
             {[
               {
-                action:
-                  "BUY RELIANCE",
-                date:
-                  "Today • 10:32 AM",
+                action: "BUY RELIANCE",
+                date: "Today • 10:32 AM",
                 amount: "+₹18,540",
                 positive: true,
               },
 
               {
                 action: "SELL TCS",
-                date:
-                  "Yesterday • 3:12 PM",
+                date: "Yesterday • 3:12 PM",
                 amount: "-₹9,200",
                 positive: false,
               },
@@ -523,58 +493,38 @@ export default function PositionsPage() {
                   gap-4
                 "
               >
-
                 <div className="flex gap-3">
-
                   <div
                     className={`
                       mt-1
                       w-2.5 h-2.5
                       rounded-full
-                      ${
-                        item.positive
-                          ? "bg-emerald-500"
-                          : "bg-red-500"
-                      }
+                      ${item.positive ? "bg-emerald-500" : "bg-red-500"}
                     `}
                   />
 
                   <div>
-
-                    <p className="text-sm font-medium">
-                      {item.action}
-                    </p>
+                    <p className="text-sm font-medium">{item.action}</p>
 
                     <p className="text-xs text-muted-foreground mt-1">
                       {item.date}
                     </p>
-
                   </div>
-
                 </div>
 
                 <span
                   className={`
                     text-sm font-semibold
-                    ${
-                      item.positive
-                        ? "text-emerald-500"
-                        : "text-red-500"
-                    }
+                    ${item.positive ? "text-emerald-500" : "text-red-500"}
                   `}
                 >
                   {item.amount}
                 </span>
-
               </div>
             ))}
-
           </div>
-
         </div>
-
       </div>
-
     </AppLayout>
   );
 }

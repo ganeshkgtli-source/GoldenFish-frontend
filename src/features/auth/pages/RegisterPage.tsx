@@ -1,8 +1,9 @@
  
 import { useNavigate } from "@tanstack/react-router";
 
-import RegisterWizard from "../components/RegisterWizard";
-import ThemeToggle from "../components/ThemeToggle";
+const RegisterWizard = lazy(() =>
+  import("../components/RegisterWizard")
+);import ThemeToggle from "../components/ThemeToggle";
 
 import {
   useRegister,
@@ -11,7 +12,7 @@ import {
 } from "../hooks/useAuth";
 
 import type { RegisterPayload } from "../api/authApi";
-import {  useState } from "react";
+import {  lazy, useState } from "react";
 
 /* ================= HELPERS ================= */
 

@@ -247,6 +247,7 @@ export default function PortfolioPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbol or ISIN..."
               className="
+              wizard-input
                 h-10 w-full
                 rounded-xl
                 border border-border
