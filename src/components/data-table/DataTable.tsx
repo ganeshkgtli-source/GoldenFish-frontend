@@ -23,6 +23,7 @@ function DataTableComponent<T>({
   minWidth = "1200px",
   virtualized = false,
 }: DataTableProps<T>) {
+    "use no memo";
   const parentRef =
     useRef<HTMLDivElement>(null);
 
@@ -73,6 +74,7 @@ function DataTableComponent<T>({
   // =========================================
   // VIRTUALIZATION
   // =========================================
+/* eslint-disable react-hooks/incompatible-library */
 
   const rowVirtualizer =
     useVirtualizer({
