@@ -188,6 +188,7 @@ export default function Navbar() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    preload="intent"
                     onClick={closeMenus}
                     className={`
                       relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg
@@ -406,6 +407,7 @@ export default function Navbar() {
                 <Link
                   key={item.to}
                   to={item.to}
+                  preload="intent"
                   onClick={closeMenus}
                   // onClick={() => setMobileOpen(false)}
                   style={{ animationDelay: `${idx * 40}ms` }}

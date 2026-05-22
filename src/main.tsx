@@ -7,7 +7,11 @@ import Root from "./Root";
 import { ThemeProvider } from "./context/ThemeContext";
 import { queryClient } from "./lib/queryClient";
 import { ToastContainer } from "react-toastify";
+// import { scan } from "react-scan";
 
+// if (import.meta.env.DEV) {
+//   scan();
+// }
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(

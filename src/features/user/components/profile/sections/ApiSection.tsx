@@ -212,7 +212,7 @@ export default function ApiSection({
               </div>
 
               <div className="group flex items-center justify-between rounded-xl border border-border/60 bg-black/20 dark:bg-white/[0.03] px-4 py-3 transition-all hover:border-red-500/30">
-                <span className="text-[13px] font-medium text-gray-200 break-all tracking-wide">
+                <span className="text-[13px] font-medium text-white-200 break-all tracking-wide">
                   {callbackUrl}
                 </span>
               </div>

@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 
-import AppLayout from "@/layouts/UserLayout";
+import TableSkeleton from "@/components/ui/TableSkeleton";
 
-import TradeBook from "../components/orders/TradeBook";
-import OrderBook from "../components/orders/OrderBook";
-import Ledger from "../components/orders/Ledger";
-import Reports from "../components/orders/Reports";
+const TradeBook = lazy(() => import("../components/orders/TradeBook"));
+
+const OrderBook = lazy(() => import("../components/orders/OrderBook"));
+
+const Ledger = lazy(() => import("../components/orders/Ledger"));
+
+const Reports = lazy(() => import("../components/orders/Reports"));
 
 const tabs = [
   {
@@ -27,21 +30,20 @@ const tabs = [
     key: "reports",
     label: "Reports",
   },
-];
+] as const;
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState("tradebook");
 
   return (
-    <AppLayout sidebar={false}>
+    <div className="space-y-6">
       {/* HEADER */}
       <div
         className="
-          flex flex-col
+          flex flex-col gap-4
           lg:flex-row
           lg:items-center
           lg:justify-between
-          gap-4
         "
       >
         <div>
@@ -49,21 +51,17 @@ export default function OrdersPage() {
             Orders & Reports
           </h1>
 
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Track trades, orders, ledger entries and reports.
           </p>
         </div>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden items-center gap-2 md:flex">
           <button
             className="
-              h-10 px-4
-              rounded-xl
-              border border-border
-              bg-card
-              text-sm font-medium
-              hover:bg-muted
-              transition-colors
+              h-10 rounded-xl border border-border
+              bg-card px-4 text-sm font-medium
+              transition-colors hover:bg-muted
             "
           >
             Download Report
@@ -71,13 +69,10 @@ export default function OrdersPage() {
 
           <button
             className="
-              h-10 px-4
-              rounded-xl
-              bg-emerald-500
-              text-black
-              text-sm font-semibold
-              hover:opacity-90
-              transition-opacity
+              h-10 rounded-xl
+              bg-emerald-500 px-4
+              text-sm font-semibold text-black
+              transition-opacity hover:opacity-90
             "
           >
             Export CSV
@@ -86,15 +81,12 @@ export default function OrdersPage() {
       </div>
 
       {/* TABS */}
-      <div className="overflow-x-auto scrollbar-hide">
+      <div className="scrollbar-hide overflow-x-auto">
         <div
           className="
-            inline-flex items-center gap-2
-            rounded-2xl
-            border border-border
-            bg-card
-            p-1
-            min-w-max
+            inline-flex min-w-max items-center gap-2
+            rounded-2xl border border-border
+            bg-card p-1
           "
         >
           {tabs.map((tab) => {
@@ -105,15 +97,13 @@ export default function OrdersPage() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`
-                  h-10 px-5
-                  rounded-xl
-                  text-sm font-medium
+                  h-10 whitespace-nowrap rounded-xl
+                  px-5 text-sm font-medium
                   transition-all
-                  whitespace-nowrap
                   ${
                     active
                       ? "bg-emerald-500 text-black shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }
                 `}
               >
@@ -125,13 +115,15 @@ export default function OrdersPage() {
       </div>
 
       {/* CONTENT */}
-      {activeTab === "tradebook" && <TradeBook />}
+      <Suspense fallback={<TableSkeleton rows={6} />}>
+        {activeTab === "tradebook" && <TradeBook />}
 
-      {activeTab === "orderbook" && <OrderBook />}
+        {activeTab === "orderbook" && <OrderBook />}
 
-      {activeTab === "ledger" && <Ledger />}
+        {activeTab === "ledger" && <Ledger />}
 
-      {activeTab === "reports" && <Reports />}
-    </AppLayout>
+        {activeTab === "reports" && <Reports />}
+      </Suspense>
+    </div>
   );
 }

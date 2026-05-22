@@ -1,5 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { getFundLimit, getHoldings, getMarketData, getOpenPositions, getOrders, getTrades } from "../api/getMarketData";
+
+import {
+  getFundLimit,
+  getHoldings,
+  getMarketData,
+  getOpenPositions,
+  getOrders,
+  getTrades,
+} from "../api/getMarketData";
+
+/* ================= ORDERS ================= */
 
 export const useOrders = () => {
   return useQuery({
@@ -7,15 +17,23 @@ export const useOrders = () => {
 
     queryFn: getOrders,
 
-    refetchOnWindowFocus: false,
-    //  refetchInterval:1000,
+    staleTime: 1000 * 5,
 
-    refetchOnReconnect: false,
+    gcTime: 1000 * 60 * 5,
+
+    // refetchInterval: 1000 * 5,
+
+    refetchIntervalInBackground: true,
+
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
 
     retry: false,
   });
 };
 
+/* ================= MARKET DATA ================= */
 
 export const useMarketData = () => {
   return useQuery({
@@ -30,20 +48,26 @@ export const useMarketData = () => {
       return await getMarketData();
     },
 
-    // Refresh every 5 minutes
-    // refetchInterval: 5 * 60 * 1000,
+    // cache fresh for 2 sec
+    staleTime: 1000 * 2,
 
-    // Continue interval in background
-    // refetchIntervalInBackground: true,
+    // keep cache 10 mins
+    gcTime: 1000 * 60 * 10,
 
-    // DO NOT refetch on tab switch
-    // refetchOnWindowFocus: false,
+    // realtime refresh
+    // refetchInterval: 1000 * 2,
 
-    // Keep cache fresh for 5 mins
-    // staleTime: 5 * 60 * 1000,
+    refetchIntervalInBackground: true,
+
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
+
+    retry: false,
   });
 };
 
+/* ================= TRADES ================= */
 
 export const useTrades = () => {
   return useQuery({
@@ -51,14 +75,23 @@ export const useTrades = () => {
 
     queryFn: getTrades,
 
-    refetchOnMount: true,
+    staleTime: 1000 * 5,
+
+    gcTime: 1000 * 60 * 5,
+
+    // refetchInterval: 1000 * 5,
+
+    refetchIntervalInBackground: true,
 
     refetchOnWindowFocus: false,
-    //  refetchInterval:1000,
 
-    staleTime: 0,
+    refetchOnReconnect: true,
+
+    retry: false,
   });
 };
+
+/* ================= FUND LIMIT ================= */
 
 export const useFundLimit = () => {
   return useQuery({
@@ -66,25 +99,47 @@ export const useFundLimit = () => {
 
     queryFn: getFundLimit,
 
-    refetchOnMount: true,
-    // refetchInterval: 1000,
+    staleTime: 1000 * 15,
 
-    staleTime: 0,
+    gcTime: 1000 * 60 * 5,
+
+    // refetchInterval: 1000 * 15,
+
+    refetchIntervalInBackground: true,
+
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
+
+    retry: false,
   });
 };
+
+/* ================= OPEN POSITIONS ================= */
 
 export const useOpenPositions = () => {
   return useQuery({
     queryKey: ["open-positions"],
 
     queryFn: getOpenPositions,
-    //  refetchInterval: 1000,
 
-    refetchOnMount: true,
+    staleTime: 1000 * 5,
 
-    staleTime: 0,
+    gcTime: 1000 * 60 * 5,
+
+    // refetchInterval: 1000 * 5,
+
+    refetchIntervalInBackground: true,
+
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
+
+    retry: false,
   });
 };
+
+/* ================= HOLDINGS ================= */
 
 export const useHoldings = () => {
   return useQuery({
@@ -92,10 +147,18 @@ export const useHoldings = () => {
 
     queryFn: getHoldings,
 
-    refetchOnMount: true,
-        // refetchInterval: 1000,
+    staleTime: 1000 * 60,
 
+    gcTime: 1000 * 60 * 10,
 
-    staleTime: 0,
+    // refetchInterval: 1000 * 60,
+
+    refetchIntervalInBackground: false,
+
+    refetchOnWindowFocus: false,
+
+    refetchOnReconnect: true,
+
+    retry: false,
   });
 };

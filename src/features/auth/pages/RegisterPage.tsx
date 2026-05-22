@@ -1,9 +1,10 @@
- 
+import { useState } from "react";
+
 import { useNavigate } from "@tanstack/react-router";
 
-const RegisterWizard = lazy(() =>
-  import("../components/RegisterWizard")
-);import ThemeToggle from "../components/ThemeToggle";
+import ThemeToggle from "../components/ThemeToggle";
+
+import RegisterWizard from "../components/RegisterWizard";
 
 import {
   useRegister,
@@ -12,7 +13,6 @@ import {
 } from "../hooks/useAuth";
 
 import type { RegisterPayload } from "../api/authApi";
-import {  lazy, useState } from "react";
 
 /* ================= HELPERS ================= */
 
@@ -25,25 +25,26 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   const registerMutation = useRegister();
+
   const verifyMutation = useVerifyOtp();
+
   const resendMutation = useResendOtp();
 
-const [registeredEmail, setRegisteredEmail] = useState(
-  sessionStorage.getItem("verify_email") || ""
-);
-  /* ================= REGISTER ================= */
-// useEffect(() => {
-//   const saved = sessionStorage.getItem("verify_email");
+  const [registeredEmail, setRegisteredEmail] =
+    useState(
+      sessionStorage.getItem("verify_email") || ""
+    );
 
-//   if (saved) {
-//     setRegisteredEmail(saved);
-//   }
-// }, []);
-  const handleRegister = async (data: RegisterPayload) => {
+  /* ================= REGISTER ================= */
+
+  const handleRegister = async (
+    data: RegisterPayload
+  ) => {
     try {
       await registerMutation.mutateAsync(data);
 
       const email = normalizeEmail(data.email);
+
       setRegisteredEmail(email);
 
       return { success: true };
@@ -57,42 +58,50 @@ const [registeredEmail, setRegisteredEmail] = useState(
 
   /* ================= VERIFY OTP ================= */
 
-  const handleVerifyOtp = async (otp: string) => {
-  if (!registeredEmail) {
-    return {
-      success: false,
-      message: "Email not found. Please register again.",
-    };
-  }
-
-  try {
-    const res = await verifyMutation.mutateAsync({
-      email: registeredEmail,
-      otp,
-    });
-
-    // ✅ CHECK BACKEND RESPONSE
-    if (res?.status === "error") {
+  const handleVerifyOtp = async (
+    otp: string
+  ) => {
+    if (!registeredEmail) {
       return {
         success: false,
-        message: res.message || "Invalid OTP",
+        message:
+          "Email not found. Please register again.",
       };
     }
 
-    // ✅ SUCCESS ONLY HERE
-    sessionStorage.removeItem("verify_email");
+    try {
+      const res =
+        await verifyMutation.mutateAsync({
+          email: registeredEmail,
+          otp,
+        });
 
-    navigate({ to: "/signin" });
+      // ✅ CHECK BACKEND RESPONSE
+      if (res?.status === "error") {
+        return {
+          success: false,
+          message:
+            res.message || "Invalid OTP",
+        };
+      }
 
-    return { success: true };
+      // ✅ SUCCESS ONLY HERE
+      sessionStorage.removeItem(
+        "verify_email"
+      );
 
-  } catch (err) {
-    return {
-      success: false,
-      message: (err as Error).message,
-    };
-  }
-};
+      navigate({
+        to: "/signin",
+      });
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        message: (err as Error).message,
+      };
+    }
+  };
 
   /* ================= RESEND OTP ================= */
 
@@ -105,7 +114,9 @@ const [registeredEmail, setRegisteredEmail] = useState(
     }
 
     try {
-      await resendMutation.mutateAsync(registeredEmail);
+      await resendMutation.mutateAsync(
+        registeredEmail
+      );
 
       return {
         success: true,
@@ -122,7 +133,19 @@ const [registeredEmail, setRegisteredEmail] = useState(
   /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 transition-colors duration-300">
+    <div
+      className="
+        min-h-screen
+        bg-background
+        text-foreground
+        flex
+        items-center
+        justify-center
+        px-4
+        transition-colors
+        duration-300
+      "
+    >
       <ThemeToggle variant="floating" />
 
       <RegisterWizard
@@ -138,7 +161,3 @@ const [registeredEmail, setRegisteredEmail] = useState(
     </div>
   );
 }
-
-
-
- 

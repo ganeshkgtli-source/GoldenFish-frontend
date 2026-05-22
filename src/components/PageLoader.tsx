@@ -1,5 +1,3 @@
-// import React from "react";
-
 export default function PageLoader() {
   return (
     <div
@@ -14,4 +12,3 @@ export default function PageLoader() {
     </div>
   );
 }
-

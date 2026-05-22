@@ -5,20 +5,24 @@ import {
   ArrowUpRight,
   Briefcase,
   IndianRupee,
-  Search,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 
-import AppLayout from "@/layouts/UserLayout";
+ 
+import type { Column } from "@/components/data-table/types";
 
-import { type Holding } from "../api/getMarketData";
+import Card from "../components/Card";
+
+import type { Holding } from "../api/getMarketData";
 
 import { useHoldings } from "../hooks/useMarketData";
 
-import Card from "../components/Card";
-import ContentTable from "../components/ContentTable";
-import TableCard from "../components/TableCard";
+import CardSkeleton from "@/components/ui/CardSkeleton";
+import TableSkeleton from "@/components/ui/TableSkeleton";
+import TableCard from "@/components/data-table/TableCard";
+import FilterBar from "@/components/data-table/FilterBar";
+import DataTable from "@/components/data-table/DataTable";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -29,38 +33,152 @@ function formatCurrency(value: number) {
 }
 
 export default function PortfolioPage() {
-  const [query, setQuery] = useState("");
+  // FILTERS
+  const [filters, setFilters] = useState({
+    search: "",
+    sort: "",
+  });
 
-  const { data: holdingsData } = useHoldings();
+  const {
+    data: holdingsData,
+    isLoading,
+  } = useHoldings();
 
-  const holdings = useMemo(() => holdingsData?.holdings || [], [holdingsData]);
-
-  const filtered = useMemo(() => {
-    return holdings.filter(
-      (item) =>
-        item.tradingSymbol?.toLowerCase().includes(query.toLowerCase()) ||
-        item.isin?.toLowerCase().includes(query.toLowerCase()),
-    );
-  }, [query, holdings]);
-
-  const investedValue = holdingsData?.totalInvestment ?? 0;
-
-  const portfolioValue = holdings.reduce(
-    (acc, stock) => acc + stock.totalQty * stock.lastTradedPrice,
-    0,
+  const holdings = useMemo(
+    () => holdingsData?.holdings || [],
+    [holdingsData],
   );
 
-  const pnl = portfolioValue - investedValue;
+  // FILTER HANDLER
+  const handleFilterChange = (
+    key: string,
+    value: string,
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
-  const pnlPct = investedValue > 0 ? (pnl / investedValue) * 100 : 0;
+  // RESET
+  const handleReset = () => {
+    setFilters({
+      search: "",
+      sort: "",
+    });
+  };
 
-  const columns = [
+  // FILTERED DATA
+  const filtered = useMemo(() => {
+    let data = [...holdings];
+
+    // SEARCH
+    if (filters.search.trim()) {
+      const query =
+        filters.search.toLowerCase();
+
+      data = data.filter(
+        (item) =>
+          item.tradingSymbol
+            ?.toLowerCase()
+            .includes(query) ||
+          item.isin
+            ?.toLowerCase()
+            .includes(query),
+      );
+    }
+
+    // SORT
+    switch (filters.sort) {
+      case "profit_high":
+        data.sort((a, b) => {
+          const aPnl =
+            a.totalQty *
+              a.lastTradedPrice -
+            a.totalQty *
+              a.avgCostPrice;
+
+          const bPnl =
+            b.totalQty *
+              b.lastTradedPrice -
+            b.totalQty *
+              b.avgCostPrice;
+
+          return bPnl - aPnl;
+        });
+
+        break;
+
+      case "profit_low":
+        data.sort((a, b) => {
+          const aPnl =
+            a.totalQty *
+              a.lastTradedPrice -
+            a.totalQty *
+              a.avgCostPrice;
+
+          const bPnl =
+            b.totalQty *
+              b.lastTradedPrice -
+            b.totalQty *
+              b.avgCostPrice;
+
+          return aPnl - bPnl;
+        });
+
+        break;
+
+      case "qty_high":
+        data.sort(
+          (a, b) =>
+            b.totalQty - a.totalQty,
+        );
+
+        break;
+
+      case "qty_low":
+        data.sort(
+          (a, b) =>
+            a.totalQty - b.totalQty,
+        );
+
+        break;
+    }
+
+    return data;
+  }, [filters, holdings]);
+
+  // STATS
+  const investedValue =
+    holdingsData?.totalInvestment ?? 0;
+
+  const portfolioValue =
+    holdings.reduce(
+      (acc, stock) =>
+        acc +
+        stock.totalQty *
+          stock.lastTradedPrice,
+      0,
+    );
+
+  const pnl =
+    portfolioValue - investedValue;
+
+  const pnlPct =
+    investedValue > 0
+      ? (pnl / investedValue) * 100
+      : 0;
+
+  // TABLE COLUMNS
+  const columns: Column<Holding>[] = [
     {
       key: "tradingSymbol",
       title: "Stock",
 
-      render: (stock: Holding) => (
-        <span className="font-semibold">{stock.tradingSymbol}</span>
+      render: (stock) => (
+        <span className="font-semibold">
+          {stock.tradingSymbol}
+        </span>
       ),
     },
 
@@ -68,8 +186,14 @@ export default function PortfolioPage() {
       key: "isin",
       title: "ISIN",
 
-      render: (stock: Holding) => (
-        <span className="font-mono text-xs text-muted-foreground">
+      render: (stock) => (
+        <span
+          className="
+            font-mono
+            text-xs
+            text-muted-foreground
+          "
+        >
           {stock.isin}
         </span>
       ),
@@ -99,8 +223,12 @@ export default function PortfolioPage() {
       key: "avgCostPrice",
       title: "Avg Cost",
 
-      render: (stock: Holding) => (
-        <span>{formatCurrency(stock.avgCostPrice)}</span>
+      render: (stock) => (
+        <span>
+          {formatCurrency(
+            stock.avgCostPrice,
+          )}
+        </span>
       ),
     },
 
@@ -108,9 +236,11 @@ export default function PortfolioPage() {
       key: "lastTradedPrice",
       title: "LTP",
 
-      render: (stock: Holding) => (
+      render: (stock) => (
         <span className="font-semibold">
-          {formatCurrency(stock.lastTradedPrice)}
+          {formatCurrency(
+            stock.lastTradedPrice,
+          )}
         </span>
       ),
     },
@@ -119,10 +249,11 @@ export default function PortfolioPage() {
       key: "change",
       title: "Change",
 
-      render: (stock: Holding) => {
+      render: (stock) => {
         const change =
           stock.avgCostPrice > 0
-            ? ((stock.lastTradedPrice - stock.avgCostPrice) /
+            ? ((stock.lastTradedPrice -
+                stock.avgCostPrice) /
                 stock.avgCostPrice) *
               100
             : 0;
@@ -130,22 +261,43 @@ export default function PortfolioPage() {
         return (
           <span
             className={`
-              inline-flex items-center gap-1
-              px-2 py-1 rounded-md
-              text-xs font-medium
+              inline-flex
+              items-center gap-1
+
+              rounded-md
+
+              px-2 py-1
+
+              text-xs
+              font-medium
+
               ${
                 change >= 0
-                  ? "bg-green-500/20 text-green-500"
-                  : "bg-red-500/20 text-red-500"
+                  ? `
+                    bg-green-500/20
+                    text-green-500
+                  `
+                  : `
+                    bg-red-500/20
+                    text-red-500
+                  `
               }
             `}
           >
             {change >= 0 ? (
-              <ArrowUpRight size={11} />
+              <ArrowUpRight
+                size={11}
+              />
             ) : (
-              <ArrowDownRight size={11} />
+              <ArrowDownRight
+                size={11}
+              />
             )}
-            {Math.abs(change).toFixed(2)}%
+
+            {Math.abs(change).toFixed(
+              2,
+            )}
+            %
           </span>
         );
       },
@@ -155,29 +307,48 @@ export default function PortfolioPage() {
       key: "pnl",
       title: "P&L",
 
-      render: (stock: Holding) => {
-        const current = stock.totalQty * stock.lastTradedPrice;
+      render: (stock) => {
+        const current =
+          stock.totalQty *
+          stock.lastTradedPrice;
 
-        const invested = stock.totalQty * stock.avgCostPrice;
+        const invested =
+          stock.totalQty *
+          stock.avgCostPrice;
 
-        const stockPnl = current - invested;
+        const stockPnl =
+          current - invested;
 
-        const isProfit = stockPnl >= 0;
+        const isProfit =
+          stockPnl >= 0;
 
         return (
           <div className="flex flex-col">
             <span
               className={`
-                font-bold text-sm
-                ${isProfit ? "text-green-500" : "text-red-500"}
+                text-sm
+                font-bold
+
+                ${
+                  isProfit
+                    ? "text-green-500"
+                    : "text-red-500"
+                }
               `}
             >
               {isProfit ? "+" : ""}
 
-              {formatCurrency(stockPnl)}
+              {formatCurrency(
+                stockPnl,
+              )}
             </span>
 
-            <span className="text-xs text-muted-foreground">
+            <span
+              className="
+                text-xs
+                text-muted-foreground
+              "
+            >
               {formatCurrency(current)}
             </span>
           </div>
@@ -186,23 +357,64 @@ export default function PortfolioPage() {
     },
   ];
 
+  // LOADING
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* TOP CARDS */}
+        <div
+          className="
+            grid grid-cols-1 gap-4
+            sm:grid-cols-2
+            xl:grid-cols-4
+          "
+        >
+          {[...Array(4)].map(
+            (_, i) => (
+              <CardSkeleton key={i} />
+            ),
+          )}
+        </div>
+
+        {/* TABLE */}
+        <TableSkeleton rows={8} />
+      </div>
+    );
+  }
+
   return (
-    <AppLayout>
+    <>
       {/* STATS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div
+        className="
+          grid grid-cols-1 gap-4
+          sm:grid-cols-2
+          xl:grid-cols-4
+        "
+      >
         <Card
           title="Portfolio Value"
-          value={formatCurrency(portfolioValue)}
-          change={`${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}% overall`}
+          value={formatCurrency(
+            portfolioValue,
+          )}
+          change={`${
+            pnlPct >= 0 ? "+" : ""
+          }${pnlPct.toFixed(
+            2,
+          )}% overall`}
           icon={<Wallet size={20} />}
           color="blue"
         />
 
         <Card
           title="Invested Value"
-          value={formatCurrency(investedValue)}
+          value={formatCurrency(
+            investedValue,
+          )}
           change="Total invested capital"
-          icon={<IndianRupee size={20} />}
+          icon={
+            <IndianRupee size={20} />
+          }
           color="purple"
         />
 
@@ -211,64 +423,106 @@ export default function PortfolioPage() {
           value={formatCurrency(pnl)}
           change={
             pnl >= 0
-              ? `+${formatCurrency(pnl)} profit`
-              : `${formatCurrency(pnl)} loss`
+              ? `+${formatCurrency(
+                  pnl,
+                )} profit`
+              : `${formatCurrency(
+                  pnl,
+                )} loss`
           }
-          icon={<TrendingUp size={20} />}
-          color={pnl >= 0 ? "green" : "orange"}
+          icon={
+            <TrendingUp size={20} />
+          }
+          color={
+            pnl >= 0
+              ? "green"
+              : "orange"
+          }
         />
 
         <Card
           title="Total Holdings"
-          value={String(holdingsData?.totalHoldings ?? 0)}
-          change={`${holdingsData?.totalHoldings ?? 0} active holdings`}
-          icon={<Briefcase size={20} />}
+          value={String(
+            holdingsData?.totalHoldings ??
+              0,
+          )}
+          change={`${
+            holdingsData?.totalHoldings ??
+            0
+          } active holdings`}
+          icon={
+            <Briefcase size={20} />
+          }
           color="orange"
         />
       </div>
 
       {/* TABLE */}
-      <TableCard
-        title="Your Holdings"
-        subtitle="Live market overview of your investments."
-        actions={
-          <div className="relative w-full lg:w-[280px]">
-            <Search
-              size={14}
-              className="
-                absolute left-3 top-1/2
-                -translate-y-1/2
-                text-muted-foreground
-              "
-            />
+     {/* TABLE */}
+<TableCard
+  title="Your Holdings"
+  subtitle="Live market overview of your investments."
+  headerActions={
+    <FilterBar
+      values={filters}
+      onChange={handleFilterChange}
+      onReset={handleReset}
+      filters={[
+        {
+          type: "search",
+          key: "search",
+          placeholder:
+            "Search symbol or ISIN...",
+        },
 
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search symbol or ISIN..."
-              className="
-              wizard-input
-                h-10 w-full
-                rounded-xl
-                border border-border
-                bg-background
-                pl-9 pr-4
-                text-sm
-                outline-none
-                focus:ring-2
-                focus:ring-primary/20
-              "
-            />
-          </div>
-        }
-      >
-        <ContentTable
-          columns={columns}
-          data={filtered}
-          emptyText="No holdings found"
-          minWidth="1400px"
-        />
-      </TableCard>
-    </AppLayout>
+        {
+          type: "sort",
+          key: "sort",
+          options: [
+            {
+              label:
+                "Highest Profit",
+              value:
+                "profit_high",
+            },
+
+            {
+              label:
+                "Lowest Profit",
+              value:
+                "profit_low",
+            },
+
+            {
+              label:
+                "Highest Qty",
+              value: "qty_high",
+            },
+
+            {
+              label:
+                "Lowest Qty",
+              value: "qty_low",
+            },
+          ],
+        },
+
+        {
+          type: "reset",
+          key: "reset",
+        },
+      ]}
+    />
+  }
+>
+  {/* TABLE */}
+  <DataTable
+    columns={columns}
+    data={filtered}
+    emptyText="No holdings found"
+    minWidth="1400px"
+  />
+</TableCard>
+    </>
   );
 }

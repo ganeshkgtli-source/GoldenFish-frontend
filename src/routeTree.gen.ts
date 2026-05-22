@@ -11,13 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PositionsRouteImport } from './routes/positions'
-import { Route as PortfolioRouteImport } from './routes/portfolio'
-import { Route as OrdersRouteImport } from './routes/orders'
-import { Route as MoneyRouteImport } from './routes/money'
 import { Route as Kyc_verificationRouteImport } from './routes/kyc_verification'
-import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as UserRouteImport } from './routes/_user'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
 import { Route as SuperAdminCreatestrategiesRouteImport } from './routes/super-admin/createstrategies'
@@ -27,6 +22,12 @@ import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminErrorsRouteImport } from './routes/admin/errors'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminClientsRouteImport } from './routes/admin/clients'
+import { Route as UserProfileRouteImport } from './routes/_user/profile'
+import { Route as UserPositionsRouteImport } from './routes/_user/positions'
+import { Route as UserPortfolioRouteImport } from './routes/_user/portfolio'
+import { Route as UserOrdersRouteImport } from './routes/_user/orders'
+import { Route as UserMoneyRouteImport } from './routes/_user/money'
+import { Route as UserDashboardRouteImport } from './routes/_user/dashboard'
 import { Route as ResetPasswordUidTokenRouteImport } from './routes/reset-password.$uid.$token'
 import { Route as AdminClientIdRouteImport } from './routes/admin/client/$id'
 
@@ -40,39 +41,13 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PositionsRoute = PositionsRouteImport.update({
-  id: '/positions',
-  path: '/positions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortfolioRoute = PortfolioRouteImport.update({
-  id: '/portfolio',
-  path: '/portfolio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrdersRoute = OrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MoneyRoute = MoneyRouteImport.update({
-  id: '/money',
-  path: '/money',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const Kyc_verificationRoute = Kyc_verificationRouteImport.update({
   id: '/kyc_verification',
   path: '/kyc_verification',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const UserRoute = UserRouteImport.update({
+  id: '/_user',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -121,6 +96,36 @@ const AdminClientsRoute = AdminClientsRouteImport.update({
   path: '/admin/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UserProfileRoute = UserProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => UserRoute,
+} as any)
+const UserPositionsRoute = UserPositionsRouteImport.update({
+  id: '/positions',
+  path: '/positions',
+  getParentRoute: () => UserRoute,
+} as any)
+const UserPortfolioRoute = UserPortfolioRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
+  getParentRoute: () => UserRoute,
+} as any)
+const UserOrdersRoute = UserOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => UserRoute,
+} as any)
+const UserMoneyRoute = UserMoneyRouteImport.update({
+  id: '/money',
+  path: '/money',
+  getParentRoute: () => UserRoute,
+} as any)
+const UserDashboardRoute = UserDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => UserRoute,
+} as any)
 const ResetPasswordUidTokenRoute = ResetPasswordUidTokenRouteImport.update({
   id: '/reset-password/$uid/$token',
   path: '/reset-password/$uid/$token',
@@ -134,15 +139,15 @@ const AdminClientIdRoute = AdminClientIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/kyc_verification': typeof Kyc_verificationRoute
-  '/money': typeof MoneyRoute
-  '/orders': typeof OrdersRoute
-  '/portfolio': typeof PortfolioRoute
-  '/positions': typeof PositionsRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
+  '/dashboard': typeof UserDashboardRoute
+  '/money': typeof UserMoneyRoute
+  '/orders': typeof UserOrdersRoute
+  '/portfolio': typeof UserPortfolioRoute
+  '/positions': typeof UserPositionsRoute
+  '/profile': typeof UserProfileRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/errors': typeof AdminErrorsRoute
@@ -156,15 +161,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/kyc_verification': typeof Kyc_verificationRoute
-  '/money': typeof MoneyRoute
-  '/orders': typeof OrdersRoute
-  '/portfolio': typeof PortfolioRoute
-  '/positions': typeof PositionsRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
+  '/dashboard': typeof UserDashboardRoute
+  '/money': typeof UserMoneyRoute
+  '/orders': typeof UserOrdersRoute
+  '/portfolio': typeof UserPortfolioRoute
+  '/positions': typeof UserPositionsRoute
+  '/profile': typeof UserProfileRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/errors': typeof AdminErrorsRoute
@@ -179,15 +184,16 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/_user': typeof UserRouteWithChildren
   '/kyc_verification': typeof Kyc_verificationRoute
-  '/money': typeof MoneyRoute
-  '/orders': typeof OrdersRoute
-  '/portfolio': typeof PortfolioRoute
-  '/positions': typeof PositionsRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
+  '/_user/dashboard': typeof UserDashboardRoute
+  '/_user/money': typeof UserMoneyRoute
+  '/_user/orders': typeof UserOrdersRoute
+  '/_user/portfolio': typeof UserPortfolioRoute
+  '/_user/positions': typeof UserPositionsRoute
+  '/_user/profile': typeof UserProfileRoute
   '/admin/clients': typeof AdminClientsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/errors': typeof AdminErrorsRoute
@@ -203,15 +209,15 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/dashboard'
     | '/kyc_verification'
+    | '/register'
+    | '/signin'
+    | '/dashboard'
     | '/money'
     | '/orders'
     | '/portfolio'
     | '/positions'
     | '/profile'
-    | '/register'
-    | '/signin'
     | '/admin/clients'
     | '/admin/dashboard'
     | '/admin/errors'
@@ -225,15 +231,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/dashboard'
     | '/kyc_verification'
+    | '/register'
+    | '/signin'
+    | '/dashboard'
     | '/money'
     | '/orders'
     | '/portfolio'
     | '/positions'
     | '/profile'
-    | '/register'
-    | '/signin'
     | '/admin/clients'
     | '/admin/dashboard'
     | '/admin/errors'
@@ -247,15 +253,16 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/dashboard'
+    | '/_user'
     | '/kyc_verification'
-    | '/money'
-    | '/orders'
-    | '/portfolio'
-    | '/positions'
-    | '/profile'
     | '/register'
     | '/signin'
+    | '/_user/dashboard'
+    | '/_user/money'
+    | '/_user/orders'
+    | '/_user/portfolio'
+    | '/_user/positions'
+    | '/_user/profile'
     | '/admin/clients'
     | '/admin/dashboard'
     | '/admin/errors'
@@ -270,13 +277,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  UserRoute: typeof UserRouteWithChildren
   Kyc_verificationRoute: typeof Kyc_verificationRoute
-  MoneyRoute: typeof MoneyRoute
-  OrdersRoute: typeof OrdersRoute
-  PortfolioRoute: typeof PortfolioRoute
-  PositionsRoute: typeof PositionsRoute
-  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   SigninRoute: typeof SigninRoute
   AdminClientsRoute: typeof AdminClientsRoute
@@ -307,41 +309,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/positions': {
-      id: '/positions'
-      path: '/positions'
-      fullPath: '/positions'
-      preLoaderRoute: typeof PositionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portfolio': {
-      id: '/portfolio'
-      path: '/portfolio'
-      fullPath: '/portfolio'
-      preLoaderRoute: typeof PortfolioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/orders': {
-      id: '/orders'
-      path: '/orders'
-      fullPath: '/orders'
-      preLoaderRoute: typeof OrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/money': {
-      id: '/money'
-      path: '/money'
-      fullPath: '/money'
-      preLoaderRoute: typeof MoneyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/kyc_verification': {
       id: '/kyc_verification'
       path: '/kyc_verification'
@@ -349,11 +316,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Kyc_verificationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+    '/_user': {
+      id: '/_user'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof UserRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -419,6 +386,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_user/profile': {
+      id: '/_user/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof UserProfileRouteImport
+      parentRoute: typeof UserRoute
+    }
+    '/_user/positions': {
+      id: '/_user/positions'
+      path: '/positions'
+      fullPath: '/positions'
+      preLoaderRoute: typeof UserPositionsRouteImport
+      parentRoute: typeof UserRoute
+    }
+    '/_user/portfolio': {
+      id: '/_user/portfolio'
+      path: '/portfolio'
+      fullPath: '/portfolio'
+      preLoaderRoute: typeof UserPortfolioRouteImport
+      parentRoute: typeof UserRoute
+    }
+    '/_user/orders': {
+      id: '/_user/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof UserOrdersRouteImport
+      parentRoute: typeof UserRoute
+    }
+    '/_user/money': {
+      id: '/_user/money'
+      path: '/money'
+      fullPath: '/money'
+      preLoaderRoute: typeof UserMoneyRouteImport
+      parentRoute: typeof UserRoute
+    }
+    '/_user/dashboard': {
+      id: '/_user/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof UserDashboardRouteImport
+      parentRoute: typeof UserRoute
+    }
     '/reset-password/$uid/$token': {
       id: '/reset-password/$uid/$token'
       path: '/reset-password/$uid/$token'
@@ -436,15 +445,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface UserRouteChildren {
+  UserDashboardRoute: typeof UserDashboardRoute
+  UserMoneyRoute: typeof UserMoneyRoute
+  UserOrdersRoute: typeof UserOrdersRoute
+  UserPortfolioRoute: typeof UserPortfolioRoute
+  UserPositionsRoute: typeof UserPositionsRoute
+  UserProfileRoute: typeof UserProfileRoute
+}
+
+const UserRouteChildren: UserRouteChildren = {
+  UserDashboardRoute: UserDashboardRoute,
+  UserMoneyRoute: UserMoneyRoute,
+  UserOrdersRoute: UserOrdersRoute,
+  UserPortfolioRoute: UserPortfolioRoute,
+  UserPositionsRoute: UserPositionsRoute,
+  UserProfileRoute: UserProfileRoute,
+}
+
+const UserRouteWithChildren = UserRoute._addFileChildren(UserRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  UserRoute: UserRouteWithChildren,
   Kyc_verificationRoute: Kyc_verificationRoute,
-  MoneyRoute: MoneyRoute,
-  OrdersRoute: OrdersRoute,
-  PortfolioRoute: PortfolioRoute,
-  PositionsRoute: PositionsRoute,
-  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   SigninRoute: SigninRoute,
   AdminClientsRoute: AdminClientsRoute,
