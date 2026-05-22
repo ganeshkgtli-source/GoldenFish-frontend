@@ -52,22 +52,23 @@ export default function OtpVerification({
   }, []);
 
   /* ================= TIMER FIX ================= */
-  useEffect(() => {
-    if (timer <= 0) {
-      setTimer(0);
+useEffect(() => {
+  if (timer <= 0) return;
 
-      // ✅ ADD THIS LINE
-      setBlocked(false);
+  const interval = setInterval(() => {
+    setTimer((prev) => {
+      if (prev <= 1) {
+        setBlocked(false);
+        clearInterval(interval);
+        return 0;
+      }
 
-      return;
-    }
+      return prev - 1;
+    });
+  }, 1000);
 
-    const interval = setInterval(() => {
-      setTimer((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timer]);
+  return () => clearInterval(interval);
+}, [timer]);
   /* ================= SUCCESS MESSAGE ================= */
   useEffect(() => {
     if (!success) return;
@@ -224,13 +225,12 @@ export default function OtpVerification({
     };
   }, [otp, loading, blocked, handleVerify,success]);
 
-  useEffect(() => {
-    const savedEmail = sessionStorage.getItem("verify_email");
+  const savedEmail = sessionStorage.getItem("verify_email");
 
-    if (!email && !savedEmail) {
-      setError("Session expired. Please register again.");
-    }
-  }, [email]);
+const sessionError =
+  !email && !savedEmail
+    ? "Session expired. Please register again."
+    : "";
   /* ================= RESEND ================= */
 
   const handleResend = async () => {
@@ -347,12 +347,12 @@ export default function OtpVerification({
         </span>
       </p>
 
-      {(error || success) && (
+      {(error || sessionError || success) && (
         <div
           className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium border
           ${success ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}
         >
-          {success || error}
+          {success || error || sessionError}
         </div>
       )}
 
