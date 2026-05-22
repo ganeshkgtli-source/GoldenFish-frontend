@@ -1,13 +1,23 @@
+import { Suspense, lazy } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
 
-import KycVerificationPage
-from "@/features/auth/pages/KycVerificationPage";
+import PageLoader from "@/components/PageLoader";
+
 import { requireAuth } from "@/lib/auth";
 
-export const Route = createFileRoute( "/kyc_verification")({
-    beforeLoad: () => {
-          requireAuth();
-        },
-    component:
-      KycVerificationPage,
-  });
+const KycVerificationPage = lazy(() =>
+  import("@/features/auth/pages/KycVerificationPage")
+);
+
+export const Route = createFileRoute("/kyc_verification")({
+  beforeLoad: () => {
+    requireAuth();
+  },
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <KycVerificationPage />
+    </Suspense>
+  ),
+});
+

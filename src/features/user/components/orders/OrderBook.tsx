@@ -1,279 +1,406 @@
 import { useMemo, useState } from "react";
+
+import TableSkeleton from "@/components/ui/TableSkeleton";
+
+import DataTable from "@/components/data-table/DataTable";
+import FilterBar from "@/components/data-table/FilterBar";
+import Pagination from "@/components/data-table/Pagination";
+import TableCard from "@/components/data-table/TableCard";
+
+import type { Column } from "@/components/data-table/types";
+
 import { useOrders } from "../../hooks/useMarketData";
+
 import type { Order } from "../../api/getMarketData";
 
-
- 
-type FilterType =
-  | "ALL"
-  | "PENDING"
-  | "TRADED";
-
-const FILTERS: FilterType[] = [
-  "ALL",
-  "PENDING",
-  "TRADED",
-];
 export default function OrderBook() {
-    const [activeFilter, setActiveFilter] =
-      useState<FilterType>("ALL");
-  
-    const {
-      data: ordersData,
-      isLoading,
-      error,
-    } = useOrders();
-  
-   const ORDERS = useMemo<Order[]>(
-  () => ordersData || [],
-  [ordersData]
-);
-  
-    const filteredOrders = useMemo(() => {
-  
-      if (activeFilter === "ALL") {
-        return ORDERS;
-      }
-  
-      return ORDERS.filter(
+  // =========================================
+  // FILTERS
+  // =========================================
+
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "",
+    // type: "",
+    // fromDate: "",
+    // toDate: "",
+  });
+
+  // =========================================
+  // PAGINATION
+  // =========================================
+
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 9;
+
+  // =========================================
+  // API
+  // =========================================
+
+  const { data: ordersData, isLoading, error } = useOrders();
+
+  // =========================================
+  // FILTER CHANGE
+  // =========================================
+
+  const handleFilterChange = (key: string, value: string) => {
+    setPage(1);
+
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  // =========================================
+  // RESET
+  // =========================================
+
+  const handleReset = () => {
+    setPage(1);
+
+    setFilters({
+      search: "",
+      status: "",
+      // type: "",
+      // fromDate: "",
+      // toDate: "",
+    });
+  };
+
+  // =========================================
+  // QUICK RANGE
+  // =========================================
+
+  const handleQuickRange = (days: number) => {
+    const today = new Date();
+
+    const from = new Date();
+
+    from.setDate(today.getDate() - days);
+
+    setFilters((prev) => ({
+      ...prev,
+
+      fromDate: from.toISOString().split("T")[0],
+
+      toDate: today.toISOString().split("T")[0],
+    }));
+  };
+
+  // =========================================
+  // FILTERED DATA
+  // =========================================
+
+  const filteredOrders = useMemo(() => {
+    let orders = ordersData || [];
+
+    // SEARCH
+    if (filters.search.trim()) {
+      const query = filters.search.toLowerCase();
+
+      orders = orders.filter(
         (order) =>
-          order.orderStatus === activeFilter
-      );
-  
-    }, [activeFilter, ORDERS]);
-  
-    if (isLoading) {
-      return (
-        <div className="p-6">
-          Loading orders...
-        </div>
+          order.tradingSymbol?.toLowerCase().includes(query) ||
+          order.orderId?.toString().includes(query),
       );
     }
-  
-    if (error) {
-      return (
-        <div className="p-6 text-red-500">
+
+    // STATUS
+    if (filters.status) {
+      orders = orders.filter((order) => order.orderStatus === filters.status);
+    }
+
+    // TYPE
+    // if (filters.type) {
+    //   orders = orders.filter((order) => order.transactionType === filters.type);
+    // }
+
+    return orders;
+  }, [filters, ordersData]);
+
+  // =========================================
+  // PAGINATION
+  // =========================================
+
+  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
+
+  const paginatedOrders = filteredOrders.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
+
+  // =========================================
+  // COLUMNS
+  // =========================================
+
+  const columns: Column<Order>[] = [
+    {
+      key: "orderId",
+      title: "Order ID",
+
+      render: (o) => <span className="font-medium">#{o.orderId}</span>,
+    },
+
+    {
+      key: "status",
+      title: "Status",
+
+      render: (o) => (
+        <span
+          className={`
+              whitespace-nowrap
+
+              rounded-md
+
+              px-2 py-1
+
+              text-xs
+              font-medium
+
+              ${
+                o.orderStatus === "PENDING"
+                  ? `
+                    bg-yellow-500/20
+                    text-yellow-500
+                  `
+                  : o.orderStatus === "TRADED"
+                    ? `
+                      bg-green-500/20
+                      text-green-500
+                    `
+                    : `
+                      bg-red-500/20
+                      text-red-500
+                    `
+              }
+            `}
+        >
+          {o.orderStatus}
+        </span>
+      ),
+    },
+
+    {
+      key: "transactionType",
+      title: "Type",
+
+      render: (o) => (
+        <span
+          className={
+            o.transactionType === "BUY"
+              ? `
+                  font-semibold
+                  text-green-500
+                `
+              : `
+                  font-semibold
+                  text-red-500
+                `
+          }
+        >
+          {o.transactionType}
+        </span>
+      ),
+    },
+
+    {
+      key: "exchangeSegment",
+      title: "Exchange",
+    },
+
+    {
+      key: "productType",
+      title: "Product",
+    },
+
+    {
+      key: "orderType",
+      title: "Order Type",
+    },
+
+    {
+      key: "validity",
+      title: "Validity",
+    },
+
+    {
+      key: "tradingSymbol",
+      title: "Stock",
+
+      render: (o) => <span className="font-medium">{o.tradingSymbol}</span>,
+    },
+
+    {
+      key: "quantity",
+      title: "Qty",
+    },
+
+    {
+      key: "price",
+      title: "Price",
+
+      render: (o) => (
+        <span>
+          ₹{o.averageTradedPrice > 0 ? o.averageTradedPrice : o.price}
+        </span>
+      ),
+    },
+
+    {
+      key: "filledQty",
+      title: "Filled",
+    },
+
+    {
+      key: "remainingQuantity",
+      title: "Remaining",
+    },
+  ];
+
+  // =========================================
+  // LOADING
+  // =========================================
+
+  if (isLoading) {
+    return <TableSkeleton />;
+  }
+
+  // =========================================
+  // ERROR
+  // =========================================
+
+  if (error) {
+    return (
+      <div
+        className="
+          rounded-2xl
+
+          border border-red-500/20
+
+          bg-red-500/5
+
+          p-6
+        "
+      >
+        <p
+          className="
+            text-sm
+            font-medium
+            text-red-500
+          "
+        >
           Failed to load orders
-        </div>
-      );
-    }
-return (
+        </p>
 
-    <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
-
-      {/* HEADER */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">
-
-        {/* TITLE */}
-        <div>
-
-          <h2 className="text-lg font-semibold tracking-tight">
-            Today's Orders
-          </h2>
-
-          <p className="text-sm text-muted-foreground mt-1">
-            Track all live and completed orders
-          </p>
-
-        </div>
-
-        {/* FILTERS */}
-        <div className="flex items-center gap-2 bg-muted/40 p-1 rounded-xl w-fit">
-
-          {FILTERS.map((filter) => {
-
-            const isActive =
-              activeFilter === filter;
-
-            return (
-
-              <button
-                key={filter}
-                type="button"
-                onClick={() =>
-                  setActiveFilter(filter)
-                }
-                className={`
-                  px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200
-                  focus:outline-none focus:ring-2 focus:ring-primary/30
-                  ${
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background hover:text-foreground"
-                  }
-                `}
-              >
-                {filter === "ALL"
-                  ? "All"
-                  : filter === "PENDING"
-                  ? "Open"
-                  : "Executed"}
-              </button>
-
-            );
-
-          })}
-
-        </div>
-
+        <p
+          className="
+            mt-2
+            text-xs
+            text-muted-foreground
+          "
+        >
+          Please try again later.
+        </p>
       </div>
+    );
+  }
 
+  // =========================================
+  // UI
+  // =========================================
+
+  return (
+    <TableCard
+      title="Order Book"
+      subtitle="Track all live and completed orders"
+      headerActions={
+        <FilterBar
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleReset}
+          onQuickRange={handleQuickRange}
+          filters={[
+            {
+              type: "search",
+              key: "search",
+              placeholder: "Search orders...",
+            },
+
+            {
+              type: "select",
+              key: "status",
+              placeholder: "All",
+              options: [
+                // {
+                //   label: "All Status",
+                //   value: "",
+                // },
+
+                {
+                  label: "Pending",
+                  value: "PENDING",
+                },
+
+                {
+                  label: "Executed",
+                  value: "TRADED",
+                },
+              ],
+            },
+
+            // {
+            //   type: "select",
+            //   key: "type",
+            //   placeholder: "All",
+            //   options: [
+            //     {
+            //       label: "All",
+            //       value: "",
+            //     },
+
+            //     {
+            //       label: "BUY",
+            //       value: "BUY",
+            //     },
+
+            //     {
+            //       label: "SELL",
+            //       value: "SELL",
+            //     },
+            //   ],
+            // },
+
+            // {
+            //   type: "date-range",
+            //   key: "date",
+            // },
+
+            {
+              type: "reset",
+              key: "reset",
+            },
+          ]}
+        />
+      }
+    >
       {/* TABLE */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <DataTable
+        columns={columns}
+        data={paginatedOrders}
+        emptyText="No orders found"
+        minWidth="1400px"
+      />
 
-        {/* SCROLL AREA */}
-        <div className="overflow-auto max-h-[520px]">
-
-          <div className="min-w-[1400px]">
-
-            {/* TABLE HEADER */}
-            <div
-              className="
-                sticky top-0 z-50
-                bg-background
-                border-b border-border
-                shadow-sm
-                backdrop-blur
-              "
-            >
-
-              <div
-                className="
-                  grid
-                  grid-cols-[1.5fr_repeat(11,1fr)]
-                  px-4 py-3
-                  text-xs font-semibold
-                  text-muted-foreground
-                  bg-background
-                "
-              >
-
-                <span>Order ID</span>
-                <span>Status</span>
-                <span>Type</span>
-                <span>Exchange</span>
-                <span>Product</span>
-                <span>Order Type</span>
-                <span>Validity</span>
-                <span>Stock</span>
-                <span>Qty</span>
-                <span>Price</span>
-                <span>Filled</span>
-                <span>Remaining</span>
-
-              </div>
-
-            </div>
-
-            {/* TABLE BODY */}
-            <div className="divide-y divide-border">
-
-              {filteredOrders.map((o) => (
-
-                <div
-                  key={o.orderId}
-                  className="
-                    grid
-                    grid-cols-[1.5fr_repeat(11,1fr)]
-                    px-4 py-3
-                    text-sm
-                    hover:bg-muted/40
-                    transition-colors
-                  "
-                >
-
-                  {/* ORDER ID */}
-                  <span className="font-medium truncate">
-                    #{o.orderId}
-                  </span>
-
-                  {/* STATUS */}
-                  <span
-                    className={`
-                      text-xs px-2 py-1 rounded-md w-fit h-fit font-medium
-                      ${
-                        o.orderStatus === "PENDING"
-                          ? "bg-yellow-500/20 text-yellow-500"
-                          : o.orderStatus === "TRADED"
-                          ? "bg-green-500/20 text-green-500"
-                          : "bg-red-500/20 text-red-500"
-                      }
-                    `}
-                  >
-                    {o.orderStatus}
-                  </span>
-
-                  {/* TYPE */}
-                  <span
-                    className={
-                      o.transactionType === "BUY"
-                        ? "text-green-500 font-semibold"
-                        : "text-red-500 font-semibold"
-                    }
-                  >
-                    {o.transactionType}
-                  </span>
-
-                  {/* EXCHANGE */}
-                  <span className="truncate">
-                    {o.exchangeSegment}
-                  </span>
-
-                  {/* PRODUCT */}
-                  <span className="truncate">
-                    {o.productType}
-                  </span>
-
-                  {/* ORDER TYPE */}
-                  <span className="truncate">
-                    {o.orderType}
-                  </span>
-
-                  {/* VALIDITY */}
-                  <span>
-                    {o.validity}
-                  </span>
-
-                  {/* STOCK */}
-                  <span className="font-medium truncate">
-                    {o.tradingSymbol}
-                  </span>
-
-                  {/* QUANTITY */}
-                  <span>
-                    {o.quantity}
-                  </span>
-
-                  {/* PRICE */}
-                  <span>
-                    ₹
-                    {o.averageTradedPrice > 0
-                      ? o.averageTradedPrice
-                      : o.price}
-                  </span>
-
-                  {/* FILLED */}
-                  <span>
-                    {o.filledQty}
-                  </span>
-
-                  {/* REMAINING */}
-                  <span>
-                    {o.remainingQuantity}
-                  </span>
-
-                </div>
-
-              ))}
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
+      {/* PAGINATION */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredOrders.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </TableCard>
   );
 }

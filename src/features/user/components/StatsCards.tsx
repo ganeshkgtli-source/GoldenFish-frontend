@@ -1,10 +1,27 @@
 import { Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
 import { useFundLimit, useOpenPositions } from "../hooks/useMarketData";
 import Card from "./Card";
+import CardSkeleton from "@/components/ui/CardSkeleton";
 
 export default function StatsCards() {
-  const { data: fundData } = useFundLimit();
-  const { data: positionsData } = useOpenPositions();
+ const {
+  data: fundData,
+  isLoading: fundLoading,
+} = useFundLimit();
+
+const {
+  data: positionsData,
+  isLoading: positionsLoading,
+} = useOpenPositions();
+if (fundLoading || positionsLoading) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      {[...Array(4)].map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
       {/* TOTAL BALANCE */}

@@ -19,10 +19,13 @@ import {
   CreditCard,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
+ 
 
 import StatPill from "@/features/user/components/profile/StatPill";
+import ProfileSkeleton from "../components/skeletons/ProfileSkeleton";
+import ProfileSectionSkeleton from "../components/skeletons/ProfileSectionSkeleton";
+import ApiSectionSkeleton from "../components/skeletons/ApiSectionSkeleton";
+import SecuritySectionSkeleton from "../components/skeletons/SecuritySectionSkeleton";
 
 const OverviewSection = lazy(
   () => import("../components/profile/sections/OverviewSection"),
@@ -98,10 +101,13 @@ export default function Profile() {
   //   ];
   // }, [data?.subscription]);
 
+  if (isLoading) {
+  return <ProfileSkeleton />;
+}
+
   /* ── RENDER ─────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Navbar />
+    
 
       <main className="flex-1   mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* ── HERO CARD ─────────────────────────────────────── */}
@@ -178,63 +184,51 @@ export default function Profile() {
           ))}
         </div>
 
-        <Suspense
-          fallback={
-            <div className="space-y-6 animate-pulse">
-              {/* TOP CARD */}
-              <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-muted" />
+      <Suspense
+  fallback={
+    activeSection === "overview" ? (
+      <ProfileSectionSkeleton />
+    ) : activeSection === "api" ? (
+      <ApiSectionSkeleton />
+    ) : activeSection === "security" ? (
+      <SecuritySectionSkeleton />
+    ) : (
+      <ProfileSectionSkeleton />
+    )
+  }
+>
+  {activeSection === "overview" && (
+    <OverviewSection data={data} />
+  )}
 
-                  <div className="space-y-2 flex-1">
-                    <div className="h-5 w-40 rounded bg-muted" />
+  {activeSection === "account" && (
+    <AccountSection />
+  )}
 
-                    <div className="h-4 w-64 rounded bg-muted" />
+  {activeSection === "api" && (
+    <ApiSection
+      data={data}
+      updateApiMutation={updateApiMutation}
+      editApi={
+        search?.edit === true ||
+        search?.edit === "true"
+      }
+    />
+  )}
 
-                    <div className="h-4 w-40 rounded bg-muted" />
-                  </div>
-                </div>
-              </div>
-
-              {/* CONTENT CARD */}
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-                <div className="h-5 w-40 rounded bg-muted" />
-
-                <div className="space-y-3">
-                  <div className="h-14 rounded-xl bg-muted" />
-
-                  <div className="h-14 rounded-xl bg-muted" />
-
-                  <div className="h-14 rounded-xl bg-muted" />
-
-                  <div className="h-14 rounded-xl bg-muted" />
-                </div>
-              </div>
-            </div>
-          }
-        >
-          {activeSection === "overview" && <OverviewSection data={data} />}
-
-          {activeSection === "account" && <AccountSection />}
-
-          {activeSection === "api" && (
-            <ApiSection
-              data={data}
-              updateApiMutation={updateApiMutation}
-              editApi={search?.edit === true || search?.edit === "true"}
-            />
-          )}
-
-          {activeSection === "security" && (
-            <SecuritySection
-              changePasswordMutation={changePasswordMutation}
-              sendOtpMutation={sendOtpMutation}
-              verifyOtpMutation={verifyOtpMutation}
-            />
-          )}
-        </Suspense>
+  {activeSection === "security" && (
+    <SecuritySection
+      changePasswordMutation={
+        changePasswordMutation
+      }
+      sendOtpMutation={sendOtpMutation}
+      verifyOtpMutation={
+        verifyOtpMutation
+      }
+    />
+  )}
+</Suspense>
       </main>
-      <Footer />
-    </div>
+ 
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, lazy,Suspense , useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   TrendingUp,
@@ -19,12 +19,11 @@ import {
   useForgotPassword,
 } from "../hooks/useAuth";
 import ThemeToggle from "../components/ThemeToggle";
-import OtpVerification from "../components/OtpVerification";
-  
+const OtpVerification = lazy(() => import("../components/OtpVerification"));
 import { useAuthStore } from "@/store/authStore";
 import { normalizeRole } from "@/lib/auth";
 import { parseError } from "../api/authApi";
- 
+
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -48,475 +47,404 @@ export default function LoginPage() {
   // ✅ MODAL STATE
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [showExpiryPopup, setShowExpiryPopup] =
-  useState(false);
+  const [showExpiryPopup, setShowExpiryPopup] = useState(false);
 
   // ✅ COOLDOWN TIMER
   const [cooldown, setCooldown] = useState(0);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
- const setUser = useAuthStore((s) => s.setUser);
+  const setUser = useAuthStore((s) => s.setUser);
   /* ================= LOGIN ================= */
- 
-// const handleSubmit = async (
-//   e: React.FormEvent
-// ) => {
-
-//   e.preventDefault()
-
-//   setError("")
-
-//   try {
-
-//     const res =
-//       await loginMutation.mutateAsync(form)
-
-//     console.log(
-//       "LOGIN RESPONSE:",
-//       res
-//     )
-
-//     // =================================================
-//     // EMAIL VERIFICATION FLOW
-//     // =================================================
-//     if (
-//       res?.email_verification_required
-//     ) {
-
-//       setEmail(
-//         res.email ||
-//         form.identifier
-//       )
-
-//       setShowOtp(true)
-
-//       setError("")
-
-//       return
-//     }
-
-//     // =================================================
-//     // TOKEN SAFETY CHECK
-//     // =================================================
-//     if (
-//       !res?.tokens?.access ||
-//       !res?.tokens?.refresh
-//     ) {
-
-//       setError(
-//         "Login failed. Please try again."
-//       )
-
-//       return
-//     }
-
-//     // =================================================
-//     // REMEMBER ME
-//     // =================================================
-//     localStorage.setItem(
-//       "rememberMe",
-//       rememberMe
-//         ? "true"
-//         : "false"
-//     )
-
-//     // =================================================
-//     // ROLE NORMALIZATION
-//     // =================================================
-//     const role =
-//       res.role
-//         ?.trim()
-//         .toLowerCase() ??
-//       "user"
-
-//     console.log(
-//       "ROLE RAW:",
-//       res.role
-//     )
 
-//     console.log(
-//       "ROLE NORMALIZED:",
-//       role
-//     )
-
-//     // =================================================
-//     // STORE USER
-//     // =================================================
-// setUser({
+  // const handleSubmit = async (
+  //   e: React.FormEvent
+  // ) => {
+
+  //   e.preventDefault()
+
+  //   setError("")
+
+  //   try {
+
+  //     const res =
+  //       await loginMutation.mutateAsync(form)
+
+  //     console.log(
+  //       "LOGIN RESPONSE:",
+  //       res
+  //     )
+
+  //     // =================================================
+  //     // EMAIL VERIFICATION FLOW
+  //     // =================================================
+  //     if (
+  //       res?.email_verification_required
+  //     ) {
+
+  //       setEmail(
+  //         res.email ||
+  //         form.identifier
+  //       )
+
+  //       setShowOtp(true)
+
+  //       setError("")
+
+  //       return
+  //     }
+
+  //     // =================================================
+  //     // TOKEN SAFETY CHECK
+  //     // =================================================
+  //     if (
+  //       !res?.tokens?.access ||
+  //       !res?.tokens?.refresh
+  //     ) {
+
+  //       setError(
+  //         "Login failed. Please try again."
+  //       )
+
+  //       return
+  //     }
+
+  //     // =================================================
+  //     // REMEMBER ME
+  //     // =================================================
+  //     localStorage.setItem(
+  //       "rememberMe",
+  //       rememberMe
+  //         ? "true"
+  //         : "false"
+  //     )
+
+  //     // =================================================
+  //     // ROLE NORMALIZATION
+  //     // =================================================
+  //     const role =
+  //       res.role
+  //         ?.trim()
+  //         .toLowerCase() ??
+  //       "user"
 
-//   username:
-//     res.username ?? "",
+  //     console.log(
+  //       "ROLE RAW:",
+  //       res.role
+  //     )
 
-//   email:
-//     res.email ?? "",
+  //     console.log(
+  //       "ROLE NORMALIZED:",
+  //       role
+  //     )
+
+  //     // =================================================
+  //     // STORE USER
+  //     // =================================================
+  // setUser({
 
-//   role:
-//     normalizeRole(role),
+  //   username:
+  //     res.username ?? "",
 
-//   is_kyc_verified:
-//     res?.is_kyc_verified ?? false,
-// })
-
- 
+  //   email:
+  //     res.email ?? "",
 
-//     // =================================================
-//     // DHAN REDIRECT
-//     // =================================================
-//     if (res.dhan_login_url) {
+  //   role:
+  //     normalizeRole(role),
 
-//       console.log(
-//         "REDIRECTING TO DHAN..."
-//       )
+  //   is_kyc_verified:
+  //     res?.is_kyc_verified ?? false,
+  // })
 
-//       window.location.href =
-//         res.dhan_login_url
+  //     // =================================================
+  //     // DHAN REDIRECT
+  //     // =================================================
+  //     if (res.dhan_login_url) {
 
-//       return
-//     }
+  //       console.log(
+  //         "REDIRECTING TO DHAN..."
+  //       )
 
-//     // =================================================
-//     // ROLE-BASED NAVIGATION
-//     // =================================================
-//     if (
-//       role === "super_admin"
-//     ) {
+  //       window.location.href =
+  //         res.dhan_login_url
 
-//       navigate({
-//         to:
-//           "/super-admin/dashboard",
+  //       return
+  //     }
 
-//         replace: true,
-//       })
+  //     // =================================================
+  //     // ROLE-BASED NAVIGATION
+  //     // =================================================
+  //     if (
+  //       role === "super_admin"
+  //     ) {
 
-//       return
-//     }
+  //       navigate({
+  //         to:
+  //           "/super-admin/dashboard",
 
-//     if (role === "admin") {
+  //         replace: true,
+  //       })
 
-//       navigate({
-//         to:
-//           "/admin/dashboard",
+  //       return
+  //     }
 
-//         replace: true,
-//       })
+  //     if (role === "admin") {
 
-//       return
-//     }
+  //       navigate({
+  //         to:
+  //           "/admin/dashboard",
 
-//     // =================================================
-//     // BACKEND REDIRECT
-//     // =================================================
-//     if (res.redirect_to) {
+  //         replace: true,
+  //       })
 
-//       navigate({
-//         to:
-//           res.redirect_to,
+  //       return
+  //     }
 
-//         replace: true,
-//       })
+  //     // =================================================
+  //     // BACKEND REDIRECT
+  //     // =================================================
+  //     if (res.redirect_to) {
 
-//       return
-//     }
+  //       navigate({
+  //         to:
+  //           res.redirect_to,
 
-//     // =================================================
-//     // DEFAULT FALLBACK
-//     // =================================================
-//     navigate({
-//       to: "/dashboard",
-//       replace: true,
-//     })
+  //         replace: true,
+  //       })
 
-//   } catch (err: unknown) {
-
-//   console.error(err);
-
-//   const msg = parseError(err);
-
-//   // =================================================
-//   // EMAIL NOT VERIFIED
-//   // =================================================
-//   if (
-//     msg.toLowerCase().includes("verify")
-//   ) {
-
-//     setEmail(form.identifier);
-
-//     setShowOtp(true);
-
-//     setError("");
-
-//     return;
-//   }
-
-//   // =================================================
-//   // NORMAL ERRORS
-//   // =================================================
-//   setError(msg || "Invalid credentials");
-// }
-// }
-const handleSubmit = async (
-  e: React.FormEvent
-) => {
-
-  e.preventDefault();
-
-  setError("");
-
-  try {
-
-    const res =
-      await loginMutation.mutateAsync(form);
-
-    console.log(
-      "LOGIN RESPONSE:",
-      res
-    );
-
-    // =================================================
-    // EMAIL VERIFICATION FLOW
-    // =================================================
-    if (
-      res?.email_verification_required
-    ) {
-
-      setEmail(
-        res.email ||
-        form.identifier
-      );
-
-      setShowOtp(true);
-
-      setError("");
-
-      return;
-    }
-
-    // =================================================
-    // TOKEN SAFETY CHECK
-    // =================================================
-    if (
-      !res?.tokens?.access ||
-      !res?.tokens?.refresh
-    ) {
-
-      setError(
-        "Login failed. Please try again."
-      );
-
-      return;
-    }
-
-    // =================================================
-    // REMEMBER ME
-    // =================================================
-    localStorage.setItem(
-      "rememberMe",
-      rememberMe
-        ? "true"
-        : "false"
-    );
-
-    // =================================================
-    // ROLE NORMALIZATION
-    // =================================================
-    const role =
-      res.role
-        ?.trim()
-        .toLowerCase() ??
-      "user";
-
-    console.log(
-      "ROLE RAW:",
-      res.role
-    );
-
-    console.log(
-      "ROLE NORMALIZED:",
-      role
-    );
-
-    // =================================================
-    // STORE USER
-    // =================================================
-    setUser({
-
-      username:
-        res.username ?? "",
-
-      email:
-        res.email ?? "",
-
-      role:
-        normalizeRole(role),
-
-      is_kyc_verified:
-        res?.is_kyc_verified ?? false,
-    });
-
-    // =================================================
-    // API EXPIRY POPUP
-    // =================================================
-    if (
-      res?.expiry_within_30_days
-    ) {
-
-      setShowExpiryPopup(true);
-
-      return;
-    }
-
-    // =================================================
-    // DHAN REDIRECT
-    // =================================================
-    if (res.dhan_login_url) {
-
-      console.log(
-        "REDIRECTING TO DHAN..."
-      );
-
-      window.location.href =
-        res.dhan_login_url;
-
-      return;
-    }
-
-    // =================================================
-    // ROLE-BASED NAVIGATION
-    // =================================================
-    if (
-      role === "super_admin"
-    ) {
-
-      navigate({
-        to:
-          "/super-admin/dashboard",
-
-        replace: true,
+  //       return
+  //     }
+
+  //     // =================================================
+  //     // DEFAULT FALLBACK
+  //     // =================================================
+  //     navigate({
+  //       to: "/dashboard",
+  //       replace: true,
+  //     })
+
+  //   } catch (err: unknown) {
+
+  //   console.error(err);
+
+  //   const msg = parseError(err);
+
+  //   // =================================================
+  //   // EMAIL NOT VERIFIED
+  //   // =================================================
+  //   if (
+  //     msg.toLowerCase().includes("verify")
+  //   ) {
+
+  //     setEmail(form.identifier);
+
+  //     setShowOtp(true);
+
+  //     setError("");
+
+  //     return;
+  //   }
+
+  //   // =================================================
+  //   // NORMAL ERRORS
+  //   // =================================================
+  //   setError(msg || "Invalid credentials");
+  // }
+  // }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setError("");
+
+    try {
+      const res = await loginMutation.mutateAsync(form);
+
+      console.log("LOGIN RESPONSE:", res);
+
+      // =================================================
+      // EMAIL VERIFICATION FLOW
+      // =================================================
+      if (res?.email_verification_required) {
+        setEmail(res.email || form.identifier);
+
+        setShowOtp(true);
+
+        setError("");
+
+        return;
+      }
+
+      // =================================================
+      // TOKEN SAFETY CHECK
+      // =================================================
+      if (!res?.tokens?.access || !res?.tokens?.refresh) {
+        setError("Login failed. Please try again.");
+
+        return;
+      }
+
+      // =================================================
+      // REMEMBER ME
+      // =================================================
+      localStorage.setItem("rememberMe", rememberMe ? "true" : "false");
+
+      // =================================================
+      // ROLE NORMALIZATION
+      // =================================================
+      const role = res.role?.trim().toLowerCase() ?? "user";
+
+      console.log("ROLE RAW:", res.role);
+
+      console.log("ROLE NORMALIZED:", role);
+
+      // =================================================
+      // STORE USER
+      // =================================================
+      setUser({
+        username: res.username ?? "",
+
+        email: res.email ?? "",
+
+        role: normalizeRole(role),
+
+        is_kyc_verified: res?.is_kyc_verified ?? false,
       });
 
-      return;
-    }
+      // =================================================
+      // API EXPIRY POPUP
+      // =================================================
+      if (res?.expiry_within_30_days) {
+        setShowExpiryPopup(true);
 
-    if (role === "admin") {
+        return;
+      }
 
+      // =================================================
+      // DHAN REDIRECT
+      // =================================================
+      if (res.dhan_login_url) {
+        console.log("REDIRECTING TO DHAN...");
+
+        window.location.href = res.dhan_login_url;
+
+        return;
+      }
+
+      // =================================================
+      // ROLE-BASED NAVIGATION
+      // =================================================
+      if (role === "super_admin") {
+        navigate({
+          to: "/super-admin/dashboard",
+
+          replace: true,
+        });
+
+        return;
+      }
+
+      if (role === "admin") {
+        navigate({
+          to: "/admin/dashboard",
+
+          replace: true,
+        });
+
+        return;
+      }
+
+      // =================================================
+      // BACKEND REDIRECT
+      // =================================================
+      if (res.redirect_to) {
+        navigate({
+          to: res.redirect_to,
+
+          replace: true,
+        });
+
+        return;
+      }
+
+      // =================================================
+      // DEFAULT FALLBACK
+      // =================================================
       navigate({
-        to:
-          "/admin/dashboard",
-
+        to: "/dashboard",
         replace: true,
       });
+    } catch (err: unknown) {
+      console.error(err);
 
-      return;
+      const msg = parseError(err);
+
+      // =================================================
+      // EMAIL NOT VERIFIED
+      // =================================================
+      if (msg.toLowerCase().includes("verify")) {
+        setEmail(form.identifier);
+
+        setShowOtp(true);
+
+        setError("");
+
+        return;
+      }
+
+      // =================================================
+      // NORMAL ERRORS
+      // =================================================
+      setError(msg || "Invalid credentials");
     }
-
-    // =================================================
-    // BACKEND REDIRECT
-    // =================================================
-    if (res.redirect_to) {
-
-      navigate({
-        to:
-          res.redirect_to,
-
-        replace: true,
-      });
-
-      return;
-    }
-
-    // =================================================
-    // DEFAULT FALLBACK
-    // =================================================
-    navigate({
-      to: "/dashboard",
-      replace: true,
-    });
-
-  } catch (err: unknown) {
-
-    console.error(err);
-
-    const msg = parseError(err);
-
-    // =================================================
-    // EMAIL NOT VERIFIED
-    // =================================================
-    if (
-      msg
-        .toLowerCase()
-        .includes("verify")
-    ) {
-
-      setEmail(
-        form.identifier
-      );
-
-      setShowOtp(true);
-
-      setError("");
-
-      return;
-    }
-
-    // =================================================
-    // NORMAL ERRORS
-    // =================================================
-    setError(
-      msg ||
-      "Invalid credentials"
-    );
-  }
-};
+  };
   /* ================= VERIFY OTP ================= */
- const handleVerifyOtp = async (otp: string) => {
-  if (!email) {
-    return {
-      success: false,
-      message: "Email missing. Please login again.",
-    };
-  }
-
-  try {
-    const res = await verifyMutation.mutateAsync({
-      email,
-      otp,
-    });
-
-    // 🚨 IMPORTANT: normalize response for OTP component
-    if (res?.status === "error") {
+  const handleVerifyOtp = async (otp: string) => {
+    if (!email) {
       return {
         success: false,
-        message: res.message || "Invalid OTP",
+        message: "Email missing. Please login again.",
       };
     }
 
-    // ✅ success
-    setShowOtp(false);
+    try {
+      const res = await verifyMutation.mutateAsync({
+        email,
+        otp,
+      });
 
-    setForm((prev) => ({
-      ...prev,
-      identifier: email,
-    }));
+      // 🚨 IMPORTANT: normalize response for OTP component
+      if (res?.status === "error") {
+        return {
+          success: false,
+          message: res.message || "Invalid OTP",
+        };
+      }
 
-    setError("Email verified successfully. Please login.");
+      // ✅ success
+      setShowOtp(false);
 
-    return { success: true };
+      setForm((prev) => ({
+        ...prev,
+        identifier: email,
+      }));
 
-  } catch (err) {
-    return {
-      success: false,
-      message: (err as Error).message || "Invalid OTP",
-    };
-  }
-};
+      setError("Email verified successfully. Please login.");
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        message: (err as Error).message || "Invalid OTP",
+      };
+    }
+  };
   /* ================= RESEND OTP ================= */
-const handleResend = async () => {
-  try {
-    const res = await resendMutation.mutateAsync(email);
-    return res;
-  }catch (err) {
-  return Promise.reject(err);
-}
-};
+  const handleResend = async () => {
+    try {
+      const res = await resendMutation.mutateAsync(email);
+      return res;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  };
 
   const handleForgotPassword = async () => {
     if (cooldown > 0) return;
@@ -539,11 +467,8 @@ const handleResend = async () => {
       setForgotSuccess("Reset link sent successfully!");
       setCooldown(30);
     } catch (err: unknown) {
-
-  setError(
-    parseError(err)
-  );
-}
+      setError(parseError(err));
+    }
   };
 
   useEffect(() => {
@@ -839,6 +764,7 @@ const handleResend = async () => {
             </div>
           ) : (
             /* OTP Verification */
+            <Suspense fallback={null}>
             <OtpVerification
               email={email}
               loading={verifyMutation.isPending}
@@ -847,19 +773,20 @@ const handleResend = async () => {
               title="Email verification required"
               subtitle="Please verify before login"
             />
+            </Suspense>
           )}
         </div>
         {showExpiryPopup && (
-  <div
-    className="
+          <div
+            className="
       fixed inset-0 z-[100]
       flex items-center justify-center
       bg-black/70 backdrop-blur-sm
       px-4
     "
-  >
-    <div
-      className="
+          >
+            <div
+              className="
         w-full max-w-md
         rounded-3xl
         border border-red-500/20
@@ -868,126 +795,118 @@ const handleResend = async () => {
         overflow-hidden
         animate-in fade-in zoom-in-95
       "
-    >
-      {/* HEADER */}
-      <div
-        className="
+            >
+              {/* HEADER */}
+              <div
+                className="
           p-6
           border-b border-border
           bg-gradient-to-br
           from-red-500/10
           to-transparent
         "
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="
               h-12 w-12
               rounded-2xl
               bg-red-500/10
               border border-red-500/20
               flex items-center justify-center
             "
-          >
-            <AlertTriangle
-              size={24}
-              className="text-red-500"
-            />
-          </div>
+                  >
+                    <AlertTriangle size={24} className="text-red-500" />
+                  </div>
 
-          <div>
-            <h2
-              className="
+                  <div>
+                    <h2
+                      className="
                 text-lg font-bold
                 text-slate-900 dark:text-white
               "
-            >
-              API Expiry Warning
-            </h2>
+                    >
+                      API Expiry Warning
+                    </h2>
 
-            <p
-              className="
+                    <p
+                      className="
                 text-sm text-slate-500
                 dark:text-slate-400
               "
-            >
-              Action required soon
-            </p>
-          </div>
-        </div>
-      </div>
+                    >
+                      Action required soon
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-      {/* BODY */}
-      <div className="p-6 space-y-4">
-        <div
-          className="
+              {/* BODY */}
+              <div className="p-6 space-y-4">
+                <div
+                  className="
             rounded-2xl
             border border-red-500/10
             bg-red-500/[0.03]
             p-4
           "
-        >
-          <p
-            className="
+                >
+                  <p
+                    className="
               text-sm leading-relaxed
               text-slate-700 dark:text-slate-300
             "
-          >
-            Your broker API credentials are nearing
-            expiration. Please renew or regenerate
-            them to avoid interruption in automated
-            trading, strategy execution, and market
-            synchronization.
-          </p>
-        </div>
+                  >
+                    Your broker API credentials are nearing expiration. Please
+                    renew or regenerate them to avoid interruption in automated
+                    trading, strategy execution, and market synchronization.
+                  </p>
+                </div>
 
-        <div
-          className="
+                <div
+                  className="
             flex items-start gap-2
             rounded-xl
             bg-yellow-500/[0.05]
             border border-yellow-500/10
             p-3
           "
-        >
-          <AlertCircle
-            size={16}
-            className="text-yellow-500 mt-0.5"
-          />
+                >
+                  <AlertCircle size={16} className="text-yellow-500 mt-0.5" />
 
-          <p
-            className="
+                  <p
+                    className="
               text-xs leading-relaxed
               text-slate-600 dark:text-slate-400
             "
-          >
-            Expired API credentials may stop
-            order execution and live market feeds.
-          </p>
-        </div>
-      </div>
+                  >
+                    Expired API credentials may stop order execution and live
+                    market feeds.
+                  </p>
+                </div>
+              </div>
 
-      {/* FOOTER */}
-      <div
-        className="
+              {/* FOOTER */}
+              <div
+                className="
           p-5
           border-t border-border
           flex gap-3
         "
-      >
-        <button
-          onClick={() => {
-            setShowExpiryPopup(false);
+              >
+                <button
+                  onClick={() => {
+                    setShowExpiryPopup(false);
 
-           navigate({
-  to: "/profile",
-  search: {
-    section: "api",
-    edit: true,
-  },
-});
-          }}
-          className="
+                    navigate({
+                      to: "/profile",
+                      search: {
+                        section: "api",
+                        edit: true,
+                      },
+                    });
+                  }}
+                  className="
             flex-1
             py-3
             rounded-xl
@@ -997,19 +916,19 @@ const handleResend = async () => {
             font-semibold
             transition
           "
-        >
-          Update API
-        </button>
+                >
+                  Update API
+                </button>
 
-        <button
-          onClick={() => {
-            setShowExpiryPopup(false);
+                <button
+                  onClick={() => {
+                    setShowExpiryPopup(false);
 
-            navigate({
-              to: "/dashboard",
-            });
-          }}
-          className="
+                    navigate({
+                      to: "/dashboard",
+                    });
+                  }}
+                  className="
             flex-1
             py-3
             rounded-xl
@@ -1018,13 +937,13 @@ const handleResend = async () => {
             font-medium
             transition
           "
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

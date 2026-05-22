@@ -2,20 +2,21 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Briefcase,
-  CreditCard,
+  // CreditCard,
   IndianRupee,
-  Landmark,
+  // Landmark,
   Plus,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 
-import AppLayout from "@/layouts/UserLayout";
-
+ 
 import { useFundLimit, useOpenPositions } from "../hooks/useMarketData";
 
 import Card from "../components/Card";
-import TableCard from "../components/TableCard";
+ 
+import MoneyPageSkeleton from "../components/skeletons/MoneyPageSkeleton";
+import TableCard from "@/components/data-table/TableCard";
 
 const transactions = [
   {
@@ -48,11 +49,24 @@ const transactions = [
 ];
 
 export default function MoneyPage() {
-  const { data: fundData } = useFundLimit();
-  const { data: positionsData } = useOpenPositions();
+ const {
+  data: fundData,
+  isLoading: fundLoading,
+} = useFundLimit();
 
+const {
+  data: positionsData,
+  isLoading: positionsLoading,
+} = useOpenPositions();
+if (fundLoading || positionsLoading) {
   return (
-    <AppLayout sidebar={false}>
+    
+      <MoneyPageSkeleton />
+    
+  );
+}
+  return (
+    <  >
       {/* HEADER */}
       <div
         className="
@@ -365,19 +379,19 @@ export default function MoneyPage() {
           <TableCard
             title="Linked Bank"
             subtitle="Primary settlement account"
-            actions={
-              <div
-                className="
-                  w-11 h-11
-                  rounded-2xl
-                  bg-blue-500/10
-                  text-blue-500
-                  flex items-center justify-center
-                "
-              >
-                <Landmark size={20} />
-              </div>
-            }
+            // actions={
+            //   <div
+            //     className="
+            //       w-11 h-11
+            //       rounded-2xl
+            //       bg-blue-500/10
+            //       text-blue-500
+            //       flex items-center justify-center
+            //     "
+            //   >
+            //     <Landmark size={20} />
+            //   </div>
+            // }
           >
             <div className="p-5">
               <div
@@ -405,19 +419,19 @@ export default function MoneyPage() {
           <TableCard
             title="Margin Details"
             subtitle="Available trading limits"
-            actions={
-              <div
-                className="
-                  w-11 h-11
-                  rounded-2xl
-                  bg-emerald-500/10
-                  text-emerald-500
-                  flex items-center justify-center
-                "
-              >
-                <Wallet size={20} />
-              </div>
-            }
+            // actions={
+            //   <div
+            //     className="
+            //       w-11 h-11
+            //       rounded-2xl
+            //       bg-emerald-500/10
+            //       text-emerald-500
+            //       flex items-center justify-center
+            //     "
+            //   >
+            //     <Wallet size={20} />
+            //   </div>
+            // }
           >
             <div className="p-5 space-y-5">
               {[
@@ -468,19 +482,19 @@ export default function MoneyPage() {
           <TableCard
             title="Payment Methods"
             subtitle="Saved payment options"
-            actions={
-              <div
-                className="
-                  w-11 h-11
-                  rounded-2xl
-                  bg-violet-500/10
-                  text-violet-500
-                  flex items-center justify-center
-                "
-              >
-                <CreditCard size={20} />
-              </div>
-            }
+            // actions={
+            //   <div
+            //     className="
+            //       w-11 h-11
+            //       rounded-2xl
+            //       bg-violet-500/10
+            //       text-violet-500
+            //       flex items-center justify-center
+            //     "
+            //   >
+            //     <CreditCard size={20} />
+            //   </div>
+            // }
           >
             <div className="p-5 space-y-3">
               <div
@@ -528,6 +542,6 @@ export default function MoneyPage() {
           </TableCard>
         </aside>
       </div>
-    </AppLayout>
+    </  >
   );
 }

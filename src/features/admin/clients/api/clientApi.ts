@@ -55,6 +55,7 @@ export const getClients = async (params: ClientsParams): Promise<ClientsResponse
 
 export const getClient = async (id: string): Promise<Client> => {
   const res = await api.get(`/operations/users/${id}/`);
+  console.log("API Response:", res); // Debug log
   return res.data;
 };
 
