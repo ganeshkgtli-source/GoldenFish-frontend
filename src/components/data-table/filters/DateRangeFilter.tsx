@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type DateRangeFilterProps = {
   fromDate: string;
@@ -23,15 +23,24 @@ export default function DateRangeFilter({
     "single" | "range"
   >("single");
 
-  useEffect(() => {
-    if (mode === "single") {
-      setToDate(fromDate);
-    }
-  }, [mode, fromDate, setToDate]);
-
   const today = new Date()
     .toISOString()
     .split("T")[0];
+
+  const handleSingleDateChange = (
+    value: string,
+  ) => {
+    setFromDate(value);
+
+    /**
+     * IMPORTANT
+     * directly set same date
+     * no useEffect loop
+     */
+    if (mode === "single") {
+      setToDate(value);
+    }
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -39,14 +48,22 @@ export default function DateRangeFilter({
       <div
         className="
           flex items-center overflow-hidden
-
           rounded-xl
           border border-border
         "
       >
         <button
           type="button"
-          onClick={() => setMode("single")}
+          onClick={() => {
+            setMode("single");
+
+            /**
+             * sync immediately
+             */
+            if (fromDate) {
+              setToDate(fromDate);
+            }
+          }}
           className={`
             h-10 px-4 text-xs font-medium
             transition-colors
@@ -63,7 +80,9 @@ export default function DateRangeFilter({
 
         <button
           type="button"
-          onClick={() => setMode("range")}
+          onClick={() =>
+            setMode("range")
+          }
           className={`
             h-10 px-4 text-xs font-medium
             transition-colors
@@ -86,22 +105,19 @@ export default function DateRangeFilter({
           value={fromDate}
           max={today}
           onChange={(e) =>
-            setFromDate(e.target.value)
+            handleSingleDateChange(
+              e.target.value,
+            )
           }
           className="
             h-10
-
             rounded-xl
             border border-border
             bg-[var(--input-background)]
-
             px-3
-
             text-sm text-foreground
-
             outline-none
             transition-colors
-
             focus:border-blue-500
             focus:ring-2
             focus:ring-blue-500/20
@@ -119,22 +135,19 @@ export default function DateRangeFilter({
               value={toDate}
               max={today}
               onChange={(e) =>
-                setToDate(e.target.value)
+                setToDate(
+                  e.target.value,
+                )
               }
               className="
                 h-10
-
                 rounded-xl
                 border border-border
                 bg-[var(--input-background)]
-
                 px-3
-
                 text-sm text-foreground
-
                 outline-none
                 transition-colors
-
                 focus:border-blue-500
                 focus:ring-2
                 focus:ring-blue-500/20
@@ -166,19 +179,17 @@ export default function DateRangeFilter({
                 key={item.label}
                 type="button"
                 onClick={() =>
-                  onQuickRange(item.value)
+                  onQuickRange(
+                    item.value,
+                  )
                 }
                 className="
                   h-9 rounded-xl
                   border border-border
-
                   px-3
-
                   text-xs
                   text-muted-foreground
-
                   transition-colors
-
                   hover:bg-muted
                   hover:text-foreground
                 "

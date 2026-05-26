@@ -1,313 +1,448 @@
-import { useMemo, useState, useRef } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { useMemo, useState } from "react";
 
-export type Trade = {
-  id: string;
+import { Link, useParams } from "@tanstack/react-router";
+
+import DataTable from "@/components/data-table/DataTable";
+import FilterBar from "@/components/data-table/FilterBar";
+import Pagination from "@/components/data-table/Pagination";
+import TableCard from "@/components/data-table/TableCard";
+
+import type { Column } from "@/components/data-table/types";
+
+import { useTradesSocket } from "@/websocket/hooks/useTradesSocket";
+
+import { useRealtimeStore } from "@/websocket/store/realtimeStore";
+
+import type { Trade } from "@/websocket/types/trade.types";
+
+type TradeRow = {
+  clientId: string;
+
+  tradeId: string;
+
   date: string;
+
   symbol: string;
+
   exchange: string;
-  type: "BUY" | "SELL";
+
+  type: string;
+
+  status: string;
+
   expiry: string;
+
   entryTime: string;
+
   entryPrice: number;
-  status: "OPEN" | "CLOSED";
-  exitTime?: string;
-  exitPrice?: number;
+
+  exitTime: string;
+
+  exitPrice: number;
+
   pnlLot: number;
+
   totalPnl: number;
+
   ltp: number;
+
   spot: number;
+
   strike: number;
 };
 
-const columns = [
-  "date","symbol","exchange","type","expiry",
-  "entryTime","entryPrice","status","exitTime",
-  "exitPrice","pnlLot","totalPnl","ltp","spot","strike"
-];
+export default function TradeTable() {
+  /**
+   * ROUTE PARAM
+   */
+  const { id } = useParams({
+    from: "/admin/client/$id",
+  });
 
-export default function TradeTable({ data }: { data: Trade[] }) {
-  const [sortKey, setSortKey] = useState<keyof Trade>("date");
-  const [asc, setAsc] = useState(false);
+  /**
+   * START SOCKET
+   */
+  useTradesSocket("client", id);
 
-  // ✅ pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  /**
+   * STORE
+   */
+  const realtimeTrades = useRealtimeStore((state) => state.trades);
 
-  // 🔥 column widths
-  const [colWidths, setColWidths] = useState<number[]>(
-    new Array(columns.length).fill(120)
-  );
+  /**
+   * FILTERS
+   */
+  const [filters, setFilters] = useState({
+    search: "",
 
-  const startX = useRef(0);
-  const colIndex = useRef<number | null>(null);
+    status: "ALL",
 
-  // 🔥 resize logic
-  const onMouseDown = (index: number, e: React.MouseEvent) => {
-    startX.current = e.clientX;
-    colIndex.current = index;
+    fromDate: "",
 
-    const onMove = (e: MouseEvent) => {
-      if (colIndex.current === null) return;
+    toDate: "",
+  });
 
-      const diff = e.clientX - startX.current;
+  /**
+   * PAGINATION
+   */
+  const [page, setPage] = useState(1);
 
-      setColWidths((prev) => {
-        const updated = [...prev];
-        updated[colIndex.current!] = Math.max(80, updated[colIndex.current!] + diff);
-        return updated;
-      });
+  const PAGE_SIZE = 10;
 
-      startX.current = e.clientX;
-    };
+  /**
+   * FILTER CHANGE
+   */
+  const handleFilterChange = (key: string, value: string) => {
+    setPage(1);
 
-    const onUp = () => {
-      colIndex.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
-  // ✅ FIXED SORT BUG
-  const sorted = useMemo(() => {
-    return [...data].sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
+  /**
+   * RESET
+   */
+  const handleReset = () => {
+    setPage(1);
 
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return asc ? aVal - bVal : bVal - aVal;
-      }
+    setFilters({
+      search: "",
 
-      return asc
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
+      status: "ALL",
+
+      fromDate: "",
+
+      toDate: "",
     });
-  }, [data, sortKey, asc]);
+  };
 
- const handleSort = (
-  key: keyof Trade
-) => {
-  setCurrentPage(1);
+  /**
+   * ADAPT TRADES
+   */
+  const adaptedTrades = useMemo<TradeRow[]>(() => {
+    return realtimeTrades
+      .map((t: Trade) => ({
+        clientId: String(t.user_id),
 
-  if (key === sortKey) {
-    setAsc(!asc);
-  } else {
-    setSortKey(key);
-    setAsc(true);
-  }
-};
-  // ✅ PAGINATION LOGIC
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return sorted.slice(start, start + rowsPerPage);
-  }, [sorted, currentPage, rowsPerPage]);
+        tradeId: String(t.id),
 
-  const totalPages = Math.ceil(sorted.length / rowsPerPage);
+        date: new Date(t.created_at).toLocaleString(),
 
- 
-  return (
-  <div className="flex flex-col h-[539px]">
+        symbol: t.symbol,
 
-    {/* SCROLL AREA */}
-    <div className="overflow-auto flex-1">
+        exchange: t.exchange,
 
-      {/* HEADER */}
-      <div className="sticky top-0 z-10 flex bg-blue-500/10 dark:bg-blue-500/20 border-b border-border">
-        {columns.map((col, i) => (
-          <div
-            key={col}
-            style={{ width: colWidths[i] }}
-            className="relative px-3 py-3 text-xs flex items-center gap-1"
-          >
-            <button
-              onClick={() => handleSort(col as keyof Trade)}
-              className="flex items-center gap-1 font-medium"
-            >
-              {col}
-              <ArrowUpDown size={12} />
-            </button>
+        type: t.type,
 
-            <div
-              onMouseDown={(e) => onMouseDown(i, e)}
-              className="absolute right-0 top-0 h-full w-[4px] cursor-col-resize hover:bg-blue-500"
-            />
-          </div>
-        ))}
-      </div>
+        status: t.status,
 
-      {/* BODY */}
-     
-     {/* BODY */}
-<div className="divide-y divide-border">
-  {paginatedData.map((t, rowIndex) => (
-    <div
-      key={t.id}
-      className={`
-        flex text-sm
-        ${rowIndex % 2 === 0 ? "bg-transparent" : "bg-muted/30"}
-        hover:bg-muted/50 transition
-      `}
-    >
-      {[
-        t.date,
-        t.symbol,
-        t.exchange,
-        t.type,
-        t.expiry,
-        t.entryTime,
-        `₹${t.entryPrice}`,
-        t.status,
-        t.exitTime || "--",
-        t.exitPrice ? `₹${t.exitPrice}` : "--",
-        t.pnlLot,
-        `₹${t.totalPnl}`,
-        `₹${t.ltp ?? "--"}`,
-        `₹${t.spot ?? "--"}`,
-        t.strike ?? "--",
-      ].map((val, i) => {
-        let content;
+        expiry: t.expiry,
 
-        // BUY / SELL
-        if (i === 3) {
-          content = (
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                val === "BUY"
-                  ? "text-green-500 bg-green-500/10"
-                  : "text-red-500 bg-red-500/10"
-              }`}
-            >
-              {val}
-            </span>
-          );
-        }
+        entryTime: t.entryTime,
 
-        // STATUS
-        else if (i === 7) {
-          content = (
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                val === "OPEN"
-                  ? "text-green-500 bg-green-500/10"
-                  : "text-gray-400 bg-gray-500/10"
-              }`}
-            >
-              {val}
-            </span>
-          );
-        }
+        entryPrice: t.entryPrice,
 
-        // P/L
-        else if (i === 10 || i === 11) {
-          content = (
-            <span
-              className={
-                Number(val) >= 0 ? "text-green-500" : "text-red-500"
-              }
-            >
-              {val}
-            </span>
-          );
-        }
+        exitTime: t.exitTime || "--",
 
-        // DEFAULT
-        else {
-          content = val;
-        }
+        exitPrice: t.exitPrice || 0,
 
-        return (
-          <div
-            key={i}
-            style={{ width: colWidths[i] }}
-            className="px-3 py-3"
-          >
-            {content}
-          </div>
-        );
-      })}
-    </div>
-  ))}
-</div>
-    </div>
+        pnlLot: t.pnlLot,
 
-    {/* FOOTER (FIXED) */}
-    <div className="sticky bottom-0 z-10 flex items-center justify-between px-4 py-3 border-t border-border bg-card text-sm">
+        totalPnl: t.totalPnl,
 
-      {/* LEFT */}
-      <div className="flex items-center gap-4">
+        ltp: t.ltp,
 
-        {/* ROWS */}
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Rows</span>
+        spot: t.spot,
 
-          <select
-            value={rowsPerPage}
-onChange={(e) => {
-  setRowsPerPage(
-    Number(e.target.value)
+        strike: t.strike,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [realtimeTrades]);
+
+  /**
+   * FILTERED DATA
+   */
+  const filteredData = useMemo(() => {
+    let trades = [...adaptedTrades];
+
+    /**
+     * STATUS
+     */
+    if (filters.status !== "ALL" && filters.status !== "") {
+      trades = trades.filter((t) => t.status === filters.status);
+    }
+
+    /**
+     * SEARCH
+     */
+    if (filters.search.trim()) {
+      const query = filters.search.toLowerCase();
+
+      trades = trades.filter(
+        (t) =>
+          t.symbol.toLowerCase().includes(query) ||
+          t.exchange.toLowerCase().includes(query) ||
+          t.tradeId.toLowerCase().includes(query),
+      );
+    }
+
+    /**
+     * FROM DATE
+     */
+    if (filters.fromDate) {
+      const from = new Date(filters.fromDate);
+
+      trades = trades.filter((t) => new Date(t.date) >= from);
+    }
+
+    /**
+     * TO DATE
+     */
+    if (filters.toDate) {
+      const to = new Date(filters.toDate);
+
+      to.setHours(23, 59, 59, 999);
+
+      trades = trades.filter((t) => new Date(t.date) <= to);
+    }
+
+    return trades;
+  }, [adaptedTrades, filters]);
+
+  /**
+   * PAGINATION
+   */
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+
+  const paginatedData = filteredData.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
   );
 
-  setCurrentPage(1);
-}}            className="
-              px-3 py-2 text-sm rounded-lg
-          bg-[var(--input-background)]
-          border border-border
-          text-foreground
-          focus:outline-none focus:ring-2 focus:ring-blue-500
+  /**
+   * COLUMNS
+   */
+  const columns: Column<TradeRow>[] = [
+    {
+      key: "date",
+
+      title: "Time",
+
+      render: (t) => <div className="whitespace-nowrap">{t.date}</div>,
+    },
+
+    {
+      key: "clientId",
+
+      title: "Client",
+
+      render: (t) => (
+        <Link
+          to="/admin/client/$id"
+          params={{
+            id: t.clientId,
+          }}
+          search={{
+            tab: "trades",
+          }}
+          className="
+              text-primary
+              font-semibold
+              hover:underline
             "
-          >
-            {[10, 20, 50, 100].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* INFO */}
-        <span className="text-muted-foreground">
-          Showing {(currentPage - 1) * rowsPerPage + 1}–
-          {Math.min(currentPage * rowsPerPage, sorted.length)} of {sorted.length}
-        </span>
-      </div>
-
-      {/* RIGHT */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border border-border disabled:opacity-40 hover:bg-muted"
         >
-          Prev
-        </button>
+          Client {t.clientId}
+        </Link>
+      ),
+    },
 
-        {Array.from({ length: totalPages }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded-md border ${
-              currentPage === i + 1
-                ? "bg-blue-500 text-white border-blue-500"
-                : "border-border hover:bg-muted"
-            }`}
-          >
-            {i + 1}
-          </button>
-        ))}
+    {
+      key: "tradeId",
 
-        <button
-          onClick={() =>
-            setCurrentPage((p) => Math.min(totalPages, p + 1))
+      title: "Trade ID",
+
+      render: (t) => <span className="font-medium">#{t.tradeId}</span>,
+    },
+
+    {
+      key: "symbol",
+
+      title: "Symbol",
+    },
+
+    {
+      key: "exchange",
+
+      title: "Exchange",
+    },
+
+    {
+      key: "type",
+
+      title: "Type",
+
+      render: (t) => (
+        <span
+          className={
+            t.type === "BUY"
+              ? "text-green-500 font-semibold"
+              : "text-red-500 font-semibold"
           }
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border border-border disabled:opacity-40 hover:bg-muted"
         >
-          Next
-        </button>
-      </div>
-    </div>
+          {t.type}
+        </span>
+      ),
+    },
 
-  </div>
-);
+    {
+      key: "status",
+
+      title: "Status",
+
+      render: (t) => (
+        <span
+          className={`
+              rounded-md
+              px-2 py-1
+              text-xs
+              font-semibold
+
+              ${
+                t.status === "OPEN"
+                  ? `
+                    bg-green-500/10
+                    text-green-500
+                  `
+                  : `
+                    bg-gray-500/10
+                    text-gray-400
+                  `
+              }
+            `}
+        >
+          {t.status}
+        </span>
+      ),
+    },
+
+    {
+      key: "entryPrice",
+
+      title: "Entry",
+
+      render: (t) => <span>₹{t.entryPrice}</span>,
+    },
+
+    {
+      key: "exitPrice",
+
+      title: "Exit",
+
+      render: (t) => <span>₹{t.exitPrice}</span>,
+    },
+
+    {
+      key: "quantity",
+
+      title: "LTP",
+
+      render: (t) => <span>₹{t.ltp}</span>,
+    },
+
+    {
+      key: "totalPnl",
+
+      title: "P&L",
+
+      render: (t) => (
+        <span
+          className={
+            Number(t.totalPnl) >= 0 ? "text-green-500" : "text-red-500"
+          }
+        >
+          ₹{t.totalPnl}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <TableCard
+      title="Live Trades"
+      subtitle="Realtime websocket trades"
+      headerActions={
+        <FilterBar
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleReset}
+          filters={[
+            {
+              type: "search",
+
+              key: "search",
+
+              placeholder: "Search trades...",
+            },
+
+            {
+              type: "select",
+
+              key: "status",
+
+              placeholder: "Status",
+
+              options: [
+                {
+                  label: "All",
+
+                  value: "ALL",
+                },
+
+                {
+                  label: "Open",
+
+                  value: "OPEN",
+                },
+
+                {
+                  label: "Closed",
+
+                  value: "CLOSED",
+                },
+              ],
+            },
+
+            {
+              type: "date-range",
+
+              key: "dateRange",
+            },
+
+            {
+              type: "reset",
+
+              key: "reset",
+            },
+          ]}
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={paginatedData}
+        emptyText="Waiting for live websocket trades..."
+        minWidth="1600px"
+      />
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredData.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </TableCard>
+  );
 }

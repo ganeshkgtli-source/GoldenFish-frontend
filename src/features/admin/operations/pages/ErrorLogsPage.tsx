@@ -8,17 +8,17 @@ import {
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Filter } from "./OrderLogsPage";
+// import { Filter } from "./OrderLogsPage";
 
 /* ─── TYPES ───────────────────────── */
-type Option = { label: string; value: string };
-const clientOptions: Option[] = [
-  { label: "All Clients", value: "" },
-  ...Array.from({ length: 10 }, (_, i) => ({
-    label: `Client ${i}`,
-    value: `CL${i}`,
-  })),
-];
+// type Option = { label: string; value: string };
+// const clientOptions: Option[] = [
+//   { label: "All Clients", value: "" },
+//   ...Array.from({ length: 10 }, (_, i) => ({
+//     label: `Client ${i}`,
+//     value: `CL${i}`,
+//   })),
+// ];
 
 /* ─── MOCK ERROR DATA ─────────────── */
 const allErrors = Array.from({ length: 87 }, (_, i) => ({
@@ -36,16 +36,16 @@ const allErrors = Array.from({ length: 87 }, (_, i) => ({
 }));
 
 /* ─── FILTER OPTIONS ─────────────── */
-const statusOptions = [
-  { label: "Error", value: "Error" },
-  { label: "Warning", value: "Warning" },
-  { label: "Resolved", value: "Resolved" },
-];
+// const statusOptions = [
+//   { label: "Error", value: "Error" },
+//   { label: "Warning", value: "Warning" },
+//   { label: "Resolved", value: "Resolved" },
+// ];
 
-const typeOptions = [
-  { label: "API Rejection", value: "API Rejection" },
-  { label: "Slippage", value: "Slippage" },
-];
+// const typeOptions = [
+//   { label: "API Rejection", value: "API Rejection" },
+//   { label: "Slippage", value: "Slippage" },
+// ];
 
 /* ═══════════════════════════════════ */
 export default function ErrorLogPage() {
@@ -171,7 +171,7 @@ export default function ErrorLogPage() {
             </div>
 
             {/* Dropdowns */}
-            <Filter
+            {/* <Filter
               label="All Clients"
               value={clientFilter}
               options={clientOptions}
@@ -197,7 +197,7 @@ export default function ErrorLogPage() {
                 setTypeFilter(v);
                 setPage(1);
               }}
-            />
+            /> */}
 
             {/* Single / Range toggle */}
             <div className="flex items-center border border-border rounded-lg overflow-hidden">
