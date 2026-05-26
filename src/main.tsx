@@ -12,6 +12,10 @@ import { ToastContainer } from "react-toastify";
 // if (import.meta.env.DEV) {
 //   scan();
 // }
+
+import { socketEngine } from "./websocket/core/socket";
+
+socketEngine.connect();
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(

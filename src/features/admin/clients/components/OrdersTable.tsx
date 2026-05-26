@@ -1,314 +1,425 @@
-import { useMemo, useState, useRef } from "react";
-import { ArrowUpDown } from "lucide-react";
- 
-export type Order = {
-  id: string;
-  date: string;
-  symbol: string;
-  exchange: string;
-  type: "BUY" | "SELL";
+import { useMemo, useState } from "react";
 
-  // ✅ MATCH TRADE STRUCTURE
-  expiry?: string;
-  entryTime?: string;
+import { Link, useParams } from "@tanstack/react-router";
+
+import DataTable from "@/components/data-table/DataTable";
+import FilterBar from "@/components/data-table/FilterBar";
+import Pagination from "@/components/data-table/Pagination";
+import TableCard from "@/components/data-table/TableCard";
+
+import type { Column } from "@/components/data-table/types";
+
+import { useOrdersSocket } from "@/websocket/hooks/useOrdersSocket";
+
+import { useRealtimeStore } from "@/websocket/store/realtimeStore";
+
+import type { Order } from "@/websocket/types/order.types";
+
+type OrderRow = {
+  clientId: string;
+
+  orderId: string;
+
+  date: string;
+
+  symbol: string;
+
+  exchange: string;
+
+  type: string;
+
+  status: string;
+
   entryPrice: number;
 
-  status: "PENDING" | "EXECUTED" | "CANCELLED";
+  exitPrice: number;
 
-  exitTime?: string;
-  exitPrice?: number;
+  totalPnl: number;
 
-  pnlLot?: number;
-  totalPnl?: number;
-  ltp?: number;
-  spot?: number;
-  strike?: number;
-
-  quantity: number; // keep order-specific
+  quantity: number;
 };
-const columns = [
-  "date",
-  "symbol",
-  "exchange",
-  "type",
-  "expiry",
-  "entryTime",
-  "entryPrice",
-  "status",
-  "exitTime",
-  "exitPrice",
-  "pnlLot",
-  "totalPnl",
-  "ltp",
-  "spot",
-  "strike",
-] as const satisfies readonly (keyof Order)[];
-export default function OrdersTable({ data }: { data: Order[] }) {
-  const [sortKey, setSortKey] = useState<keyof Order>("date");
-  const [asc, setAsc] = useState(false);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+export default function OrdersTable() {
+  /**
+   * ROUTE PARAM
+   */
+  const { id } = useParams({
+    from: "/admin/client/$id",
+  });
 
-  // ✅ SAME COLUMN RESIZE SYSTEM
-  const [colWidths, setColWidths] = useState<number[]>(
-    new Array(columns.length).fill(120)
+  /**
+   * START SOCKET
+   */
+  useOrdersSocket("client", id);
+
+  /**
+   * STORE
+   */
+  const realtimeOrders = useRealtimeStore((state) => state.orders);
+
+  /**
+   * FILTERS
+   */
+  const [filters, setFilters] = useState({
+    search: "",
+
+    status: "ALL",
+
+    fromDate: "",
+
+    toDate: "",
+  });
+
+  /**
+   * PAGINATION
+   */
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 10;
+
+  /**
+   * FILTER CHANGE
+   */
+  const handleFilterChange = (key: string, value: string) => {
+    setPage(1);
+
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  /**
+   * RESET
+   */
+  const handleReset = () => {
+    setPage(1);
+
+    setFilters({
+      search: "",
+
+      status: "ALL",
+
+      fromDate: "",
+
+      toDate: "",
+    });
+  };
+
+  /**
+   * ADAPT ORDERS
+   */
+  const adaptedOrders = useMemo<OrderRow[]>(() => {
+    return realtimeOrders
+      .map((o: Order) => ({
+        clientId: String(o.user_id),
+
+        orderId: String(o.order_id || o.id),
+
+        date: new Date(o.created_at).toLocaleString(),
+
+        symbol: o.trading_symbol,
+
+        exchange: o.exchange_segment,
+
+        type: o.transaction_type,
+
+        status: o.order_status,
+
+        entryPrice: Number(o.price),
+
+        exitPrice: Number(o.average_traded_price || 0),
+
+        totalPnl: 0,
+
+        quantity: o.quantity,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [realtimeOrders]);
+
+  /**
+   * FILTERED DATA
+   */
+  const filteredData = useMemo(() => {
+    let orders = [...adaptedOrders];
+
+    /**
+     * STATUS
+     */
+    if (filters.status !== "ALL" && filters.status !== "") {
+      orders = orders.filter((o) => o.status === filters.status);
+    }
+
+    /**
+     * SEARCH
+     */
+    if (filters.search.trim()) {
+      const query = filters.search.toLowerCase();
+
+      orders = orders.filter(
+        (o) =>
+          o.symbol.toLowerCase().includes(query) ||
+          o.exchange.toLowerCase().includes(query) ||
+          o.orderId.toLowerCase().includes(query),
+      );
+    }
+
+    /**
+     * FROM DATE
+     */
+    if (filters.fromDate) {
+      const from = new Date(filters.fromDate);
+
+      orders = orders.filter((o) => new Date(o.date) >= from);
+    }
+
+    /**
+     * TO DATE
+     */
+    if (filters.toDate) {
+      const to = new Date(filters.toDate);
+
+      to.setHours(23, 59, 59, 999);
+
+      orders = orders.filter((o) => new Date(o.date) <= to);
+    }
+
+    return orders;
+  }, [adaptedOrders, filters]);
+
+  /**
+   * PAGINATION
+   */
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+
+  const paginatedData = filteredData.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
   );
 
-  const startX = useRef(0);
-  const colIndex = useRef<number | null>(null);
+  /**
+   * COLUMNS
+   */
+  const columns: Column<OrderRow>[] = [
+    {
+      key: "date",
 
-  const onMouseDown = (index: number, e: React.MouseEvent) => {
-    startX.current = e.clientX;
-    colIndex.current = index;
+      title: "Time",
 
-    const onMove = (e: MouseEvent) => {
-      if (colIndex.current === null) return;
+      render: (o) => <div className="whitespace-nowrap">{o.date}</div>,
+    },
 
-      const diff = e.clientX - startX.current;
+    {
+      key: "clientId",
 
-      setColWidths((prev) => {
-        const updated = [...prev];
-        updated[colIndex.current!] = Math.max(
-          80,
-          updated[colIndex.current!] + diff
-        );
-        return updated;
-      });
+      title: "Client",
 
-      startX.current = e.clientX;
-    };
+      render: (o) => (
+        <Link
+          to="/admin/client/$id"
+          params={{
+            id: o.clientId,
+          }}
+          search={{
+            tab: "orders",
+          }}
+          className="
+            text-primary
+            font-semibold
+            hover:underline
+          "
+        >
+          Client {o.clientId}
+        </Link>
+      ),
+    },
 
-    const onUp = () => {
-      colIndex.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
+    {
+      key: "orderId",
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
+      title: "Order ID",
 
-  // 🔄 SORT
-  const sorted = useMemo(() => {
-    return [...data].sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
+      render: (o) => <span className="font-medium">#{o.orderId}</span>,
+    },
 
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return asc ? aVal - bVal : bVal - aVal;
-      }
+    {
+      key: "symbol",
 
-      return asc
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
-  }, [data, sortKey, asc]);
+      title: "Symbol",
+    },
 
-  const handleSort = (key: keyof Order) => {
-    if (key === sortKey) setAsc(!asc);
-    else {
-      setSortKey(key);
-      setAsc(true);
-    }
-  };
+    {
+      key: "exchange",
 
-  // 📄 PAGINATION
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return sorted.slice(start, start + rowsPerPage);
-  }, [sorted, currentPage, rowsPerPage]);
+      title: "Exchange",
+    },
 
-  const totalPages = Math.ceil(sorted.length / rowsPerPage);
+    {
+      key: "type",
 
- 
+      title: "Type",
+
+      render: (o) => (
+        <span
+          className={
+            o.type === "BUY"
+              ? "text-green-500 font-semibold"
+              : "text-red-500 font-semibold"
+          }
+        >
+          {o.type}
+        </span>
+      ),
+    },
+
+    {
+      key: "status",
+
+      title: "Status",
+
+      render: (o) => (
+        <span
+          className={`
+            rounded-md
+            px-2 py-1
+            text-xs
+            font-semibold
+
+            ${
+              o.status === "TRADED"
+                ? `
+                  bg-green-500/10
+                  text-green-500
+                `
+                : o.status === "PENDING"
+                  ? `
+                    bg-yellow-500/10
+                    text-yellow-500
+                  `
+                  : `
+                    bg-red-500/10
+                    text-red-500
+                  `
+            }
+          `}
+        >
+          {o.status}
+        </span>
+      ),
+    },
+
+    {
+      key: "entryPrice",
+
+      title: "Price",
+
+      render: (o) => <span>₹{o.entryPrice}</span>,
+    },
+
+    {
+      key: "quantity",
+
+      title: "Qty",
+    },
+
+    {
+      key: "totalPnl",
+
+      title: "P&L",
+
+      render: (o) => (
+        <span
+          className={
+            Number(o.totalPnl) >= 0 ? "text-green-500" : "text-red-500"
+          }
+        >
+          ₹{o.totalPnl}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-[520px]">
+    <TableCard
+      title="Live Orders"
+      subtitle="Realtime websocket orders"
+      headerActions={
+        <FilterBar
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleReset}
+          filters={[
+            {
+              type: "search",
 
-      {/* SCROLL */}
-      <div className="overflow-auto flex-1">
+              key: "search",
 
-        {/* HEADER */}
-        <div className="sticky top-0 z-10 flex bg-muted/40 border-b border-border">
-          {columns.map((col, i) => (
-            <div
-              key={col}
-              style={{ width: colWidths[i] }}
-              className="relative px-3 py-3 text-xs flex items-center gap-1"
-            >
-              <button
-                onClick={() => handleSort(col as keyof Order)}
-                className="flex items-center gap-1 font-medium"
-              >
-                {col}
-                <ArrowUpDown size={12} />
-              </button>
+              placeholder: "Search orders...",
+            },
 
-              <div
-                onMouseDown={(e) => onMouseDown(i, e)}
-                className="absolute right-0 top-0 h-full w-[4px] cursor-col-resize hover:bg-blue-500"
-              />
-            </div>
-          ))}
-        </div>
+            {
+              type: "select",
 
-        {/* BODY */}
-        <div className="divide-y divide-border">
-  {paginatedData.map((o, rowIndex) => (
-    <div
-      key={o.id}
-      className={`flex text-sm ${
-        rowIndex % 2 === 0 ? "bg-transparent" : "bg-muted/30"
-      } hover:bg-muted/60 transition`}
+              key: "status",
+
+              placeholder: "Status",
+
+              options: [
+                {
+                  label: "All",
+
+                  value: "ALL",
+                },
+
+                {
+                  label: "Pending",
+
+                  value: "PENDING",
+                },
+
+                {
+                  label: "Executed",
+
+                  value: "TRADED",
+                },
+
+                {
+                  label: "Rejected",
+
+                  value: "REJECTED",
+                },
+              ],
+            },
+
+            {
+              type: "date-range",
+
+              key: "dateRange",
+            },
+
+            {
+              type: "reset",
+
+              key: "reset",
+            },
+          ]}
+        />
+      }
     >
-      {[
-        o.date,
-        o.symbol,
-        o.exchange,
-        o.type,
-        o.expiry || "--",
-        o.entryTime || "--",
-        o.entryPrice, // ✅ keep number (IMPORTANT)
-        o.status,
-        o.exitTime || "--",
-        o.exitPrice ?? null, // ✅ keep number/null
-        o.pnlLot ?? null,
-        o.totalPnl ?? null,
-        o.ltp ?? null,
-        o.spot ?? null,
-        o.strike ?? "--",
-      ].map((val, i) => {
-        let content;
+      <DataTable
+        columns={columns}
+        data={paginatedData}
+        emptyText="Waiting for live websocket orders..."
+        minWidth="1400px"
+      />
 
-        // ✅ BUY / SELL
-        if (i === 3) {
-          content = (
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                val === "BUY"
-                  ? "text-green-500 bg-green-500/10"
-                  : "text-red-500 bg-red-500/10"
-              }`}
-            >
-              {val}
-            </span>
-          );
-        }
-
-        // ✅ STATUS
-        else if (i === 7) {
-          content = (
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                val === "EXECUTED"
-                  ? "text-green-500 bg-green-500/10"
-                  : val === "PENDING"
-                  ? "text-yellow-500 bg-yellow-500/10"
-                  : "text-red-500 bg-red-500/10"
-              }`}
-            >
-              {val}
-            </span>
-          );
-        }
-
-        // ✅ PRICE / NUMBERS
-        else if (i === 6 || i === 9 || i === 12 || i === 13) {
-          content = val !== null && val !== undefined ? `₹${val}` : "--";
-        }
-
-        // ✅ P&L COLORS (FIXED)
-        else if (i === 10 || i === 11) {
-          const num = Number(val);
-          content =
-            val !== null && val !== undefined ? (
-              <span className={num >= 0 ? "text-green-500" : "text-red-500"}>
-                {i === 11 ? `₹${num}` : num}
-              </span>
-            ) : (
-              "--"
-            );
-        }
-
-        // DEFAULT
-        else {
-          content = val ?? "--";
-        }
-
-        return (
-          <div
-            key={i}
-            style={{ width: colWidths[i] }}
-            className="px-3 py-3"
-          >
-            {content}
-          </div>
-        );
-      })}
-    </div>
-  ))}
-</div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between px-4 py-3 border-t border-border bg-card text-sm">
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Rows</span>
-            <select
-              value={rowsPerPage}
-onChange={(e) => {
-  setRowsPerPage(
-    Number(e.target.value)
-  );
-
-  setCurrentPage(1);
-}}              className="px-3 py-2 text-sm rounded-lg bg-[var(--input-background)] border border-border"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
-
-          <span className="text-muted-foreground">
-            Showing {(currentPage - 1) * rowsPerPage + 1}–
-            {Math.min(currentPage * rowsPerPage, sorted.length)} of {sorted.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="px-3 py-1 border rounded-md"
-          >
-            Prev
-          </button>
-
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentPage(i + 1)}
-              className={`px-3 py-1 border rounded-md ${
-                currentPage === i + 1 ? "bg-blue-500 text-white" : ""
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(totalPages, p + 1))
-            }
-            className="px-3 py-1 border rounded-md"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredData.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </TableCard>
   );
 }
