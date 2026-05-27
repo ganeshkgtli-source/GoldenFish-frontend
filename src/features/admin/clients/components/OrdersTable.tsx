@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { Link, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 
 import DataTable from "@/components/data-table/DataTable";
 import FilterBar from "@/components/data-table/FilterBar";
@@ -16,8 +16,6 @@ import { useRealtimeStore } from "@/websocket/store/realtimeStore";
 import type { Order } from "@/websocket/types/order.types";
 
 type OrderRow = {
-  clientId: string;
-
   orderId: string;
 
   date: string;
@@ -30,11 +28,11 @@ type OrderRow = {
 
   status: string;
 
-  entryPrice: number;
+  Price: number;
 
-  exitPrice: number;
+  // exitPrice: number;
 
-  totalPnl: number;
+  // totalPnl: number;
 
   quantity: number;
 };
@@ -75,7 +73,7 @@ export default function OrdersTable() {
    */
   const [page, setPage] = useState(1);
 
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 12;
 
   /**
    * FILTER CHANGE
@@ -126,17 +124,36 @@ export default function OrdersTable() {
 
         status: o.order_status,
 
-        entryPrice: Number(o.price),
+        Price: Number(o.price),
 
-        exitPrice: Number(o.average_traded_price || 0),
+        // exitPrice: Number(o.average_traded_price || 0),
 
-        totalPnl: 0,
+        // totalPnl: 0,
 
         quantity: o.quantity,
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [realtimeOrders]);
 
+  /**
+   * TODAY PENDING ORDERS
+   */
+  const todayPendingOrders = useMemo(() => {
+    const today = new Date();
+
+    return adaptedOrders.filter((o) => {
+      const orderDate = new Date(o.date);
+
+      const isToday =
+        orderDate.getDate() === today.getDate() &&
+        orderDate.getMonth() === today.getMonth() &&
+        orderDate.getFullYear() === today.getFullYear();
+
+      const isPending = o.status === "PENDING";
+
+      return isToday && isPending;
+    });
+  }, [adaptedOrders]);
   /**
    * FILTERED DATA
    */
@@ -209,30 +226,30 @@ export default function OrdersTable() {
       render: (o) => <div className="whitespace-nowrap">{o.date}</div>,
     },
 
-    {
-      key: "clientId",
+    // {
+    //   key: "clientId",
 
-      title: "Client",
+    //   title: "Client",
 
-      render: (o) => (
-        <Link
-          to="/admin/client/$id"
-          params={{
-            id: o.clientId,
-          }}
-          search={{
-            tab: "orders",
-          }}
-          className="
-            text-primary
-            font-semibold
-            hover:underline
-          "
-        >
-          Client {o.clientId}
-        </Link>
-      ),
-    },
+    //   render: (o) => (
+    //     <Link
+    //       to="/admin/client/$id"
+    //       params={{
+    //         id: o.clientId,
+    //       }}
+    //       search={{
+    //         tab: "orders",
+    //       }}
+    //       className="
+    //         text-primary
+    //         font-semibold
+    //         hover:underline
+    //       "
+    //     >
+    //       Client {o.clientId}
+    //     </Link>
+    //   ),
+    // },
 
     {
       key: "orderId",
@@ -313,7 +330,7 @@ export default function OrdersTable() {
 
       title: "Price",
 
-      render: (o) => <span>₹{o.entryPrice}</span>,
+      render: (o) => <span>₹{o.Price}</span>,
     },
 
     {
@@ -322,104 +339,109 @@ export default function OrdersTable() {
       title: "Qty",
     },
 
-    {
-      key: "totalPnl",
+    // {
+    //   key: "totalPnl",
 
-      title: "P&L",
+    //   title: "P&L",
 
-      render: (o) => (
-        <span
-          className={
-            Number(o.totalPnl) >= 0 ? "text-green-500" : "text-red-500"
-          }
-        >
-          ₹{o.totalPnl}
-        </span>
-      ),
-    },
+    //   render: (o) => (
+    //     <span
+    //       className={
+    //         Number(o.totalPnl) >= 0 ? "text-green-500" : "text-red-500"
+    //       }
+    //     >
+    //       ₹{o.totalPnl}
+    //     </span>
+    //   ),
+    // },
   ];
 
   return (
-    <TableCard
-      title="Live Orders"
-      subtitle="Realtime websocket orders"
-      headerActions={
-        <FilterBar
-          values={filters}
-          onChange={handleFilterChange}
-          onReset={handleReset}
-          filters={[
-            {
-              type: "search",
-
-              key: "search",
-
-              placeholder: "Search orders...",
-            },
-
-            {
-              type: "select",
-
-              key: "status",
-
-              placeholder: "Status",
-
-              options: [
-                {
-                  label: "All",
-
-                  value: "ALL",
-                },
-
-                {
-                  label: "Pending",
-
-                  value: "PENDING",
-                },
-
-                {
-                  label: "Executed",
-
-                  value: "TRADED",
-                },
-
-                {
-                  label: "Rejected",
-
-                  value: "REJECTED",
-                },
-              ],
-            },
-
-            {
-              type: "date-range",
-
-              key: "dateRange",
-            },
-
-            {
-              type: "reset",
-
-              key: "reset",
-            },
-          ]}
+    <div className="space-y-6">
+      {/* PENDING TODAY TABLE */}
+      {/* <TableCard
+        title="Today's Pending Orders"
+        subtitle="Only pending orders from today"
+      > */}
+        <DataTable
+          columns={columns}
+          data={todayPendingOrders}
+          emptyText="No pending orders for today"
+          minWidth="1400px"
         />
-      }
-    >
-      <DataTable
-        columns={columns}
-        data={paginatedData}
-        emptyText="Waiting for live websocket orders..."
-        minWidth="1400px"
-      />
+      {/* </TableCard> */}
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        totalItems={filteredData.length}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
-      />
-    </TableCard>
+      {/* ALL ORDERS TABLE */}
+      <TableCard
+        title="All Orders"
+        subtitle="Realtime websocket orders"
+        headerActions={
+          <FilterBar
+            values={filters}
+            onChange={handleFilterChange}
+            onReset={handleReset}
+            filters={[
+              {
+                type: "search",
+                key: "search",
+                placeholder: "Search orders...",
+              },
+
+              {
+                type: "select",
+                key: "status",
+                placeholder: "Status",
+                options: [
+                  {
+                    label: "All",
+                    value: "ALL",
+                  },
+
+                  {
+                    label: "Pending",
+                    value: "PENDING",
+                  },
+
+                  {
+                    label: "Executed",
+                    value: "TRADED",
+                  },
+
+                  {
+                    label: "Rejected",
+                    value: "REJECTED",
+                  },
+                ],
+              },
+
+              {
+                type: "date-range",
+                key: "dateRange",
+              },
+
+              {
+                type: "reset",
+                key: "reset",
+              },
+            ]}
+          />
+        }
+      >
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          emptyText="Waiting for live websocket orders..."
+          minWidth="1400px"
+        />
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={filteredData.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      </TableCard>
+    </div>
   );
 }

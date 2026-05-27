@@ -1,85 +1,81 @@
 import { useEffect } from "react";
 
-import { TRADE_CHANNELS } from "../channels/trades.channel";
-
 import { socketEngine } from "../core/socket";
 
 import { socketManager } from "../managers/socketManager";
 
 import { useRealtimeStore } from "../store/realtimeStore";
 
-import type { Trade } from "../types/trade.types";
-
 import type { SocketEvent } from "../types/socket.types";
+import type { Position } from "../types/position.types";
+import { POSITIONS_CHANNELS } from "../channels/positions.channel";
 
 type DeletePayload = {
   id: number;
 };
 
-type TradeSocketPayload = Trade[] | Trade | DeletePayload;
+type PositionSocketPayload = Position[] | Position | DeletePayload;
 
-export const useTradesSocket = (type: string = "self", clientId?: string) => {
+export const usePositionsSocket = (
+  type: string = "self",
+  clientId?: string,
+) => {
   useEffect(() => {
     /**
-     * INIT SOCKET MANAGER
+     * INIT
      */
     socketManager.init();
 
-    /**
-     * CONNECT WEBSOCKET
-     */
     socketEngine.connect();
-
+    const userId = "current_user";
     /**
-     * REALTIME STORE
+     * STORE
      */
-    const { setTrades, addTrade, updateTrade, removeTrade } =
+    const { setPositions, addPosition, updatePosition, removePosition } =
       useRealtimeStore.getState();
 
     /**
-     * DEFAULT USER CHANNEL
+     * CHANNEL
      */
-    let channel = TRADE_CHANNELS.USER("current_user");
+    let channel = POSITIONS_CHANNELS.USER(String(userId));
 
     /**
      * ADMIN CHANNEL
      */
     if (type === "admin") {
-      channel = TRADE_CHANNELS.ALL;
+      channel = POSITIONS_CHANNELS.ALL;
     }
 
     /**
      * CLIENT CHANNEL
      */
     if (type === "client" && clientId) {
-      channel = TRADE_CHANNELS.CLIENT(String(clientId));
+      channel = POSITIONS_CHANNELS.CLIENT(String(clientId));
     }
 
-    console.log("[TRADES SOCKET CHANNEL]", channel);
+    console.log("[ORDERS SOCKET CHANNEL]", channel);
 
     /**
      * SUBSCRIBE
      */
-    const unsubscribe = socketManager.subscribe<TradeSocketPayload>(
+    const unsubscribe = socketManager.subscribe<PositionSocketPayload>(
       channel,
       (socketEvent) => {
         const { event: eventType, data } =
-          socketEvent as SocketEvent<TradeSocketPayload>;
-
-        console.log("[TRADE SOCKET EVENT]", socketEvent);
+          socketEvent as SocketEvent<PositionSocketPayload>;
 
         /**
          * SNAPSHOT
          */
         if (eventType === "snapshot") {
           if (Array.isArray(data)) {
-            const sortedTrades = [...data].sort(
+            const sorted = [...data].sort(
               (a, b) =>
                 new Date(b.created_at).getTime() -
                 new Date(a.created_at).getTime(),
             );
 
-            setTrades(sortedTrades);
+            setPositions(sorted);
           }
 
           return;
@@ -90,7 +86,7 @@ export const useTradesSocket = (type: string = "self", clientId?: string) => {
          */
         if (eventType === "created") {
           if (data && typeof data === "object" && "id" in data) {
-            addTrade(data as Trade);
+            addPosition(data as Position);
           }
 
           return;
@@ -101,8 +97,8 @@ export const useTradesSocket = (type: string = "self", clientId?: string) => {
          */
         if (eventType === "updated") {
           if (data && typeof data === "object" && "id" in data) {
-            updateTrade(
-              data as Partial<Trade> & {
+            updatePosition(
+              data as Partial<Position> & {
                 id: number;
               },
             );
@@ -116,7 +112,7 @@ export const useTradesSocket = (type: string = "self", clientId?: string) => {
          */
         if (eventType === "deleted") {
           if (data && typeof data === "object" && "id" in data) {
-            removeTrade(Number(data.id));
+            removePosition(data.id);
           }
         }
       },
@@ -126,7 +122,7 @@ export const useTradesSocket = (type: string = "self", clientId?: string) => {
      * CLEANUP
      */
     return () => {
-      console.log("[TRADES SOCKET CLEANUP]", channel);
+      console.log("[POSITIONS SOCKET CLEANUP]", channel);
 
       unsubscribe();
     };

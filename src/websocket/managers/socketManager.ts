@@ -96,6 +96,26 @@ class SocketManager {
       }
     }
   }
+  resubscribeAll() {
+  if (socketEngine.getStatus() !== "OPEN") {
+    return;
+  }
+
+  const channels = Array.from(this.subscribedChannels);
+
+  if (channels.length === 0) {
+    return;
+  }
+
+  console.log("[WS RESUBSCRIBE]", channels);
+
+  const payload: SubscribePayload = {
+    action: "subscribe",
+    channels,
+  };
+
+  socketEngine.send(payload);
+}
 }
 
 export const socketManager = new SocketManager();

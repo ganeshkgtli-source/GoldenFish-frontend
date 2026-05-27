@@ -1,4 +1,4 @@
-export type Trade = {
+export type Error = {
   id: number;
 
   user_id: number;

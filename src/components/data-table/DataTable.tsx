@@ -13,17 +13,17 @@ import type {
   DataTableProps,
 } from "./types";
 
-const ROW_HEIGHT = 56;
+const ROW_HEIGHT = 42;
 
 function DataTableComponent<T>({
   columns,
   data,
   emptyText = "No data found",
   loading = false,
-  minWidth = "1200px",
   virtualized = false,
 }: DataTableProps<T>) {
-    "use no memo";
+  "use no memo";
+
   const parentRef =
     useRef<HTMLDivElement>(null);
 
@@ -38,8 +38,7 @@ function DataTableComponent<T>({
           className="
             flex h-[300px]
             items-center justify-center
-
-            text-sm
+            text-base
             text-muted-foreground
           "
         >
@@ -48,21 +47,20 @@ function DataTableComponent<T>({
       );
     }
 
-    if (data.length === 0) {
-      return (
-        <div
-          className="
-            flex h-[300px]
-            items-center justify-center
-
-            text-sm
-            text-muted-foreground
-          "
-        >
-          {emptyText}
-        </div>
-      );
-    }
+   if (data.length === 0) {
+  return (
+    <div
+      className="
+        flex h-16
+        items-center justify-center
+        text-sm
+        text-muted-foreground
+      "
+    >
+      {emptyText}
+    </div>
+  );
+}
 
     return null;
   }, [
@@ -74,7 +72,8 @@ function DataTableComponent<T>({
   // =========================================
   // VIRTUALIZATION
   // =========================================
-/* eslint-disable react-hooks/incompatible-library */
+
+  /* eslint-disable react-hooks/incompatible-library */
 
   const rowVirtualizer =
     useVirtualizer({
@@ -113,18 +112,18 @@ function DataTableComponent<T>({
     return (
       <div className="overflow-auto">
         <table
-          className="w-full"
-          style={{
-            minWidth,
-          }}
+          className="
+            table-auto
+            w-max
+            min-w-full
+            border-collapse
+          "
         >
           {/* HEADER */}
           <thead
             className="
               sticky top-0 z-20
-
               border-b border-border
-
               bg-background
             "
           >
@@ -137,17 +136,19 @@ function DataTableComponent<T>({
                     key={String(
                       col.key,
                     )}
-                    className="
+                    className={`
                       whitespace-nowrap
-
-                      px-5 py-4
-
-                      text-left text-xs
+                      px-4 py-2.5
+                      text-left
+                      text-[13px]
                       font-semibold
-                      uppercase tracking-wider
-
+                      uppercase
                       text-muted-foreground
-                    "
+                      ${
+                        col.className ||
+                        ""
+                      }
+                    `}
                   >
                     {col.title}
                   </th>
@@ -168,9 +169,7 @@ function DataTableComponent<T>({
                   className="
                     border-b
                     border-border/60
-
                     transition-colors
-
                     hover:bg-muted/30
                   "
                 >
@@ -184,11 +183,10 @@ function DataTableComponent<T>({
                         )}
                         className={`
                           whitespace-nowrap
-
-                          px-5 py-4
-
-                          text-sm
-
+                          px-4 py-2.5
+                          text-[15px]
+                          font-medium
+                          leading-none
                           ${
                             col.className ||
                             ""
@@ -227,35 +225,32 @@ function DataTableComponent<T>({
       <div
         className="
           sticky top-0 z-30
-
           border-b border-border
-
           bg-background
+          overflow-auto
         "
       >
-        <div
-          className="flex min-w-max"
-          style={{
-            minWidth,
-          }}
-        >
+        <div className="inline-flex min-w-full">
           {columns.map(
             (col: Column<T>) => (
               <div
-                key={String(col.key)}
-                className="
-                  min-w-[160px]
-
+                key={String(
+                  col.key,
+                )}
+                className={`
                   whitespace-nowrap
-
-                  px-5 py-4
-
-                  text-left text-xs
+                  px-4 py-2.5
+                  text-left
+                  text-[13px]
                   font-semibold
-                  uppercase tracking-wider
-
+                  uppercase
                   text-muted-foreground
-                "
+                  min-w-[140px]
+                  ${
+                    col.className ||
+                    ""
+                  }
+                `}
               >
                 {col.title}
               </div>
@@ -275,8 +270,9 @@ function DataTableComponent<T>({
         <div
           style={{
             height: `${totalHeight}px`,
-            width: "100%",
+            width: "max-content",
             position: "relative",
+            minWidth: "100%",
           }}
         >
           {virtualRows.map(
@@ -297,21 +293,14 @@ function DataTableComponent<T>({
                   ref={rowVirtualizer.measureElement}
                   className="
                     absolute left-0 top-0
-
-                    flex min-w-max
-
+                    inline-flex min-w-full
                     border-b
                     border-border/60
-
                     transition-colors
-
                     hover:bg-muted/30
                   "
                   style={{
-                    minWidth,
-
                     height: `${virtualRow.size}px`,
-
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
@@ -324,14 +313,12 @@ function DataTableComponent<T>({
                           col.key,
                         )}
                         className={`
-                          min-w-[160px]
-
                           whitespace-nowrap
-
-                          px-5 py-4
-
-                          text-sm
-
+                          px-4 py-2.5
+                          text-[15px]
+                          font-medium
+                          leading-none
+                          min-w-[140px]
                           ${
                             col.className ||
                             ""

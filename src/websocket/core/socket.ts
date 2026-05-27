@@ -1,3 +1,4 @@
+import { socketManager } from "../managers/socketManager";
 import type { ConnectionStatus, SocketEvent } from "../types/socket.types";
 
 type Listener = (event: SocketEvent) => void;
@@ -58,6 +59,7 @@ class SocketEngine {
       this.isConnecting = false;
 
       this.reconnectAttempts = 0;
+       socketManager.resubscribeAll();
     };
 
     /**

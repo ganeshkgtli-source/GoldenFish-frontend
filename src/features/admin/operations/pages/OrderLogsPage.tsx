@@ -18,6 +18,7 @@ import { useRealtimeStore } from "@/websocket/store/realtimeStore";
 import type { Order } from "@/websocket/types/order.types";
 
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
+import { useAuthStore } from "@/store/authStore";
 
 export type TableOrder = {
   orderId: string;
@@ -141,7 +142,9 @@ export default function OrderLogsPage() {
   /**
    * START SOCKET
    */
-  useOrdersSocket("admin");
+  const user = useAuthStore((s) => s.user);
+  
+  useOrdersSocket(user?.role);
 
   /**
    * STORE
@@ -169,7 +172,7 @@ export default function OrderLogsPage() {
    */
   const [page, setPage] = useState(1);
 
-  const PAGE_SIZE = 15;
+  const PAGE_SIZE = 16;
 
   /**
    * FILTER CHANGE
@@ -332,6 +335,7 @@ export default function OrderLogsPage() {
           }}
           className="
             text-primary
+            text-blue-400
             font-semibold
             hover:underline
             whitespace-nowrap

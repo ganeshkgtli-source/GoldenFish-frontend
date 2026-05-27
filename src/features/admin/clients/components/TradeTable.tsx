@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { Link, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 
 import DataTable from "@/components/data-table/DataTable";
 import FilterBar from "@/components/data-table/FilterBar";
@@ -16,9 +16,11 @@ import { useRealtimeStore } from "@/websocket/store/realtimeStore";
 import type { Trade } from "@/websocket/types/trade.types";
 
 type TradeRow = {
-  clientId: string;
+  // clientId: string;
 
   tradeId: string;
+
+  orderId: string;
 
   date: string;
 
@@ -28,27 +30,23 @@ type TradeRow = {
 
   type: string;
 
-  status: string;
+  productType: string;
 
-  expiry: string;
+  orderType: string;
 
-  entryTime: string;
+  tradedPrice: number;
 
-  entryPrice: number;
+  tradedQuantity: number;
 
-  exitTime: string;
+  tradeIdExchange: string;
 
-  exitPrice: number;
+  // expiry: string;
 
-  pnlLot: number;
+  // optionType: string;
 
-  totalPnl: number;
+  // strikePrice: string;
 
-  ltp: number;
-
-  spot: number;
-
-  strike: number;
+  // securityId: string;
 };
 
 export default function TradeTable() {
@@ -68,14 +66,14 @@ export default function TradeTable() {
    * STORE
    */
   const realtimeTrades = useRealtimeStore((state) => state.trades);
-
+ 
   /**
    * FILTERS
    */
   const [filters, setFilters] = useState({
     search: "",
 
-    status: "ALL",
+    type: "ALL",
 
     fromDate: "",
 
@@ -87,7 +85,7 @@ export default function TradeTable() {
    */
   const [page, setPage] = useState(1);
 
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 15;
 
   /**
    * FILTER CHANGE
@@ -110,7 +108,7 @@ export default function TradeTable() {
     setFilters({
       search: "",
 
-      status: "ALL",
+      type: "ALL",
 
       fromDate: "",
 
@@ -124,39 +122,40 @@ export default function TradeTable() {
   const adaptedTrades = useMemo<TradeRow[]>(() => {
     return realtimeTrades
       .map((t: Trade) => ({
-        clientId: String(t.user_id),
+        // clientId:
+        //   String(
+        //     t.user_id,
+        //   ),
 
         tradeId: String(t.id),
 
+        orderId: t.order_id,
+
         date: new Date(t.created_at).toLocaleString(),
 
-        symbol: t.symbol,
+        symbol: t.trading_symbol,
 
-        exchange: t.exchange,
+        exchange: t.exchange_segment,
 
-        type: t.type,
+        type: t.transaction_type,
 
-        status: t.status,
+        productType: t.product_type,
 
-        expiry: t.expiry,
+        orderType: t.order_type,
 
-        entryTime: t.entryTime,
+        tradedPrice: Number(t.traded_price),
 
-        entryPrice: t.entryPrice,
+        tradedQuantity: t.traded_quantity,
 
-        exitTime: t.exitTime || "--",
+        tradeIdExchange: t.exchange_trade_id,
 
-        exitPrice: t.exitPrice || 0,
+        // expiry: t.drv_expiry_date,
 
-        pnlLot: t.pnlLot,
+        // optionType: t.drv_option_type,
 
-        totalPnl: t.totalPnl,
+        // strikePrice: t.drv_strike_price,
 
-        ltp: t.ltp,
-
-        spot: t.spot,
-
-        strike: t.strike,
+        // securityId: t.security_id,
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [realtimeTrades]);
@@ -168,10 +167,10 @@ export default function TradeTable() {
     let trades = [...adaptedTrades];
 
     /**
-     * STATUS
+     * TYPE
      */
-    if (filters.status !== "ALL" && filters.status !== "") {
-      trades = trades.filter((t) => t.status === filters.status);
+    if (filters.type !== "ALL" && filters.type !== "") {
+      trades = trades.filter((t) => t.type === filters.type);
     }
 
     /**
@@ -184,7 +183,7 @@ export default function TradeTable() {
         (t) =>
           t.symbol.toLowerCase().includes(query) ||
           t.exchange.toLowerCase().includes(query) ||
-          t.tradeId.toLowerCase().includes(query),
+          t.orderId.toLowerCase().includes(query),
       );
     }
 
@@ -233,37 +232,42 @@ export default function TradeTable() {
       render: (t) => <div className="whitespace-nowrap">{t.date}</div>,
     },
 
+    // {
+    //   key: "clientId",
+
+    //   title: "Client",
+
+    //   render: (
+    //     t,
+    //   ) => (
+    //     <Link
+    //       to="/admin/client/$id"
+    //       params={{
+    //         id: t.clientId,
+    //       }}
+    //       search={{
+    //         tab: "trades",
+    //       }}
+    //       className="
+    //         text-primary
+    //         font-semibold
+    //         hover:underline
+    //       "
+    //     >
+    //       Client{" "}
+    //       {
+    //         t.clientId
+    //       }
+    //     </Link>
+    //   ),
+    // },
+
     {
-      key: "clientId",
+      key: "orderId",
 
-      title: "Client",
+      title: "Order ID",
 
-      render: (t) => (
-        <Link
-          to="/admin/client/$id"
-          params={{
-            id: t.clientId,
-          }}
-          search={{
-            tab: "trades",
-          }}
-          className="
-              text-primary
-              font-semibold
-              hover:underline
-            "
-        >
-          Client {t.clientId}
-        </Link>
-      ),
-    },
-
-    {
-      key: "tradeId",
-
-      title: "Trade ID",
-
-      render: (t) => <span className="font-medium">#{t.tradeId}</span>,
+      render: (t) => <span className="font-medium">#{t.orderId}</span>,
     },
 
     {
@@ -297,78 +301,64 @@ export default function TradeTable() {
     },
 
     {
-      key: "status",
+      key: "productType",
 
-      title: "Status",
-
-      render: (t) => (
-        <span
-          className={`
-              rounded-md
-              px-2 py-1
-              text-xs
-              font-semibold
-
-              ${
-                t.status === "OPEN"
-                  ? `
-                    bg-green-500/10
-                    text-green-500
-                  `
-                  : `
-                    bg-gray-500/10
-                    text-gray-400
-                  `
-              }
-            `}
-        >
-          {t.status}
-        </span>
-      ),
+      title: "Product",
     },
 
     {
-      key: "entryPrice",
+      key: "orderType",
 
-      title: "Entry",
-
-      render: (t) => <span>₹{t.entryPrice}</span>,
+      title: "Order Type",
     },
 
     {
-      key: "exitPrice",
+      key: "tradedPrice",
 
-      title: "Exit",
+      title: "Traded Price",
 
-      render: (t) => <span>₹{t.exitPrice}</span>,
+      render: (t) => <span>₹{t.tradedPrice}</span>,
     },
 
     {
-      key: "quantity",
+      key: "tradedQuantity",
 
-      title: "LTP",
-
-      render: (t) => <span>₹{t.ltp}</span>,
+      title: "Qty",
     },
 
     {
-      key: "totalPnl",
+      key: "tradeIdExchange",
 
-      title: "P&L",
-
-      render: (t) => (
-        <span
-          className={
-            Number(t.totalPnl) >= 0 ? "text-green-500" : "text-red-500"
-          }
-        >
-          ₹{t.totalPnl}
-        </span>
-      ),
+      title: "Exchange Trade ID",
     },
+
+    // {
+    //   key: "expiry",
+
+    //   title: "Expiry",
+    // },
+
+    // {
+    //   key: "optionType",
+
+    //   title: "Option",
+    // },
+
+    // {
+    //   key: "strikePrice",
+
+    //   title: "Strike",
+    // },
+
+    // {
+    //   key: "securityId",
+
+    //   title: "Security ID",
+    // },
   ];
 
   return (
+    
     <TableCard
       title="Live Trades"
       subtitle="Realtime websocket trades"
@@ -389,9 +379,9 @@ export default function TradeTable() {
             {
               type: "select",
 
-              key: "status",
+              key: "type",
 
-              placeholder: "Status",
+              placeholder: "Trade Type",
 
               options: [
                 {
@@ -401,15 +391,15 @@ export default function TradeTable() {
                 },
 
                 {
-                  label: "Open",
+                  label: "BUY",
 
-                  value: "OPEN",
+                  value: "BUY",
                 },
 
                 {
-                  label: "Closed",
+                  label: "SELL",
 
-                  value: "CLOSED",
+                  value: "SELL",
                 },
               ],
             },
@@ -433,7 +423,7 @@ export default function TradeTable() {
         columns={columns}
         data={paginatedData}
         emptyText="Waiting for live websocket trades..."
-        minWidth="1600px"
+        minWidth="2200px"
       />
 
       <Pagination
