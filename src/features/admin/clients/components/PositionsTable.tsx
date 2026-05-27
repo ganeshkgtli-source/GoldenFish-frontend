@@ -1,155 +1,399 @@
 import { useMemo, useState } from "react";
 
-export type Position = {
-  id: string;
+import { useParams } from "@tanstack/react-router";
+
+import DataTable from "@/components/data-table/DataTable";
+import FilterBar from "@/components/data-table/FilterBar";
+import Pagination from "@/components/data-table/Pagination";
+import TableCard from "@/components/data-table/TableCard";
+
+import type { Column } from "@/components/data-table/types";
+
+import { usePositionsSocket } from "@/websocket/hooks/usePositions";
+
+import { useRealtimeStore } from "@/websocket/store/realtimeStore";
+
+import type { Position } from "@/websocket/types/position.types";
+
+type PositionRow = {
+  positionId: string;
+
   symbol: string;
+
   exchange: string;
+
+  productType: string;
+
+  positionType: string;
+
   quantity: number;
+
   avgPrice: number;
-  ltp: number;
+
+  sellAvg: number;
+
+  buyAvg: number;
+
+  realizedPnl: number;
+
+  unrealizedPnl: number;
+
+  totalPnl: number;
+
+  netQty: number;
+
+  securityId: string;
+
+  createdAt: string;
 };
 
-export default function PositionsTable({ data }: { data: Position[] }) {
+export default function PositionsTable() {
+  /**
+   * ROUTE PARAM
+   */
+  const { id } = useParams({
+    from: "/admin/client/$id",
+  });
 
-  // ✅ pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  /**
+   * START SOCKET
+   */
+  usePositionsSocket("client", id);
 
-  // 🔢 CALCULATE PNL
-  const calculated = useMemo(() => {
-    return data.map((p) => {
-      const pnl = (p.ltp - p.avgPrice) * p.quantity;
-      return { ...p, pnl };
+  /**
+   * STORE
+   */
+  const realtimePositions = useRealtimeStore((state) => state.positions);
+
+  /**
+   * FILTERS
+   */
+  const [filters, setFilters] = useState({
+    search: "",
+
+    type: "ALL",
+
+    fromDate: "",
+
+    toDate: "",
+  });
+
+  /**
+   * PAGINATION
+   */
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 15;
+
+  /**
+   * FILTER CHANGE
+   */
+  const handleFilterChange = (key: string, value: string) => {
+    setPage(1);
+
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  /**
+   * RESET
+   */
+  const handleReset = () => {
+    setPage(1);
+
+    setFilters({
+      search: "",
+
+      type: "ALL",
+
+      fromDate: "",
+
+      toDate: "",
     });
-  }, [data]);
+  };
 
-  // 📄 PAGINATION
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return calculated.slice(start, start + rowsPerPage);
-  }, [calculated, currentPage, rowsPerPage]);
+  /**
+   * ADAPT POSITIONS
+   */
+  const adaptedPositions = useMemo<PositionRow[]>(() => {
+    return realtimePositions
+      .map((p: Position) => {
+        const realized = Number(p.realizedProfit);
 
-  const totalPages = Math.ceil(calculated.length / rowsPerPage);
+        const unrealized = Number(p.unrealizedProfit);
 
+        return {
+          positionId: String(p.id),
 
+          symbol: p.tradingSymbol,
 
-  return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col h-[400px]">
+          exchange: p.exchangeSegment,
 
-      {/* SCROLL AREA */}
-      <div className="overflow-auto flex-1">
+          productType: p.productType,
 
-        {/* HEADER */}
-        <div className="sticky top-0 z-10 grid grid-cols-[120px_100px_100px_120px_120px_120px] text-xs px-4 py-3 border-b border-border bg-blue-500/10 dark:bg-blue-500/20 min-w-[700px]">
-          <span>Symbol</span>
-          <span>Exchange</span>
-          <span>Qty</span>
-          <span>Avg Price</span>
-          <span>LTP</span>
-          <span className="text-right">P&L</span>
-        </div>
+          positionType: p.positionType,
 
-        {/* BODY */}
-        <div className="divide-y divide-border min-w-[700px]">
-          {paginatedData.map((p, i) => (
-            <div
-              key={p.id}
-              className={`grid grid-cols-[120px_100px_100px_120px_120px_120px] px-4 py-3 text-sm ${
-                i % 2 === 0 ? "bg-transparent" : "bg-muted/30"
-              } hover:bg-muted/50 transition`}
-            >
-              <span className="font-medium">{p.symbol}</span>
-              <span>{p.exchange}</span>
-              <span>{p.quantity}</span>
-              <span>₹{p.avgPrice}</span>
-              <span>₹{p.ltp}</span>
+          quantity: p.netQty,
 
-              {/* P&L */}
-              <span
-                className={`text-right font-medium ${
-                  p.pnl >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                ₹{p.pnl}
-              </span>
-            </div>
-          ))}
-        </div>
+          avgPrice: Number(p.costPrice),
 
-      </div>
+          buyAvg: Number(p.buyAvg),
 
-      {/* FOOTER */}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between px-4 py-3 border-t border-border bg-card text-sm">
+          sellAvg: Number(p.sellAvg),
 
-        {/* LEFT */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Rows</span>
-            <select
-              value={rowsPerPage}
-              onChange={(e) => {
-  setRowsPerPage(
-    Number(e.target.value)
+          realizedPnl: realized,
+
+          unrealizedPnl: unrealized,
+
+          totalPnl: realized + unrealized,
+
+          netQty: p.netQty,
+
+          securityId: p.securityId,
+
+          createdAt: new Date(p.created_at).toLocaleString(),
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+  }, [realtimePositions]);
+
+  /**
+   * FILTERED DATA
+   */
+  const filteredData = useMemo(() => {
+    let positions = [...adaptedPositions];
+
+    /**
+     * TYPE
+     */
+    if (filters.type !== "ALL" && filters.type !== "") {
+      positions = positions.filter((p) => p.positionType === filters.type);
+    }
+
+    /**
+     * SEARCH
+     */
+    if (filters.search.trim()) {
+      const query = filters.search.toLowerCase();
+
+      positions = positions.filter(
+        (p) =>
+          p.symbol.toLowerCase().includes(query) ||
+          p.exchange.toLowerCase().includes(query) ||
+          p.securityId.toLowerCase().includes(query),
+      );
+    }
+
+    return positions;
+  }, [adaptedPositions, filters]);
+
+  /**
+   * PAGINATION
+   */
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+
+  const paginatedData = filteredData.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
   );
 
-  setCurrentPage(1);
-}}
-              className="
-                px-3 py-2 text-sm rounded-lg
-                bg-[var(--input-background)]
-                border border-border
-                text-foreground
-                focus:outline-none focus:ring-2 focus:ring-blue-500
-              "
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
+  /**
+   * COLUMNS
+   */
+  const columns: Column<PositionRow>[] = [
+    {
+      key: "createdAt",
 
-          <span className="text-muted-foreground">
-            Showing {(currentPage - 1) * rowsPerPage + 1}–
-            {Math.min(currentPage * rowsPerPage, calculated.length)} of {calculated.length}
-          </span>
-        </div>
+      title: "Time",
+    },
 
-        {/* RIGHT */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded-md border border-border disabled:opacity-40 hover:bg-muted"
-          >
-            Prev
-          </button>
+    {
+      key: "symbol",
 
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentPage(i + 1)}
-              className={`px-3 py-1 rounded-md border ${
-                currentPage === i + 1
-                  ? "bg-blue-500 text-white border-blue-500"
-                  : "border-border hover:bg-muted"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
+      title: "Symbol",
+    },
 
-          <button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(totalPages, p + 1))
-            }
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded-md border border-border disabled:opacity-40 hover:bg-muted"
-          >
-            Next
-          </button>
-        </div>
+    {
+      key: "exchange",
 
-      </div>
-    </div>
+      title: "Exchange",
+    },
+
+    {
+      key: "positionType",
+
+      title: "Position",
+
+      render: (p) => (
+        <span
+          className={
+            p.positionType === "LONG"
+              ? "text-green-500 font-semibold"
+              : "text-red-500 font-semibold"
+          }
+        >
+          {p.positionType}
+        </span>
+      ),
+    },
+
+    {
+      key: "productType",
+
+      title: "Product",
+    },
+
+    {
+      key: "quantity",
+
+      title: "Net Qty",
+    },
+
+    {
+      key: "avgPrice",
+
+      title: "Avg Price",
+
+      render: (p) => <span>₹{p.avgPrice}</span>,
+    },
+
+    {
+      key: "buyAvg",
+
+      title: "Buy Avg",
+
+      render: (p) => <span>₹{p.buyAvg}</span>,
+    },
+
+    {
+      key: "sellAvg",
+
+      title: "Sell Avg",
+
+      render: (p) => <span>₹{p.sellAvg}</span>,
+    },
+
+    {
+      key: "realizedPnl",
+
+      title: "Realized",
+
+      render: (p) => (
+        <span
+          className={p.realizedPnl >= 0 ? "text-green-500" : "text-red-500"}
+        >
+          ₹{p.realizedPnl.toFixed(2)}
+        </span>
+      ),
+    },
+
+    {
+      key: "unrealizedPnl",
+
+      title: "Unrealized",
+
+      render: (p) => (
+        <span
+          className={p.unrealizedPnl >= 0 ? "text-green-500" : "text-red-500"}
+        >
+          ₹{p.unrealizedPnl.toFixed(2)}
+        </span>
+      ),
+    },
+
+    {
+      key: "totalPnl",
+
+      title: "Total P&L",
+
+      render: (p) => (
+        <span
+          className={
+            p.totalPnl >= 0
+              ? "text-green-500 font-semibold"
+              : "text-red-500 font-semibold"
+          }
+        >
+          ₹{p.totalPnl.toFixed(2)}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <TableCard
+      title="Live Positions"
+      subtitle="Realtime websocket positions"
+      headerActions={
+        <FilterBar
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleReset}
+          filters={[
+            {
+              type: "search",
+
+              key: "search",
+
+              placeholder: "Search positions...",
+            },
+
+            {
+              type: "select",
+
+              key: "type",
+
+              placeholder: "Position Type",
+
+              options: [
+                {
+                  label: "All",
+
+                  value: "ALL",
+                },
+
+                {
+                  label: "LONG",
+
+                  value: "LONG",
+                },
+
+                {
+                  label: "SHORT",
+
+                  value: "SHORT",
+                },
+              ],
+            },
+
+            {
+              type: "reset",
+
+              key: "reset",
+            },
+          ]}
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={paginatedData}
+        emptyText="Waiting for live websocket positions..."
+        minWidth="1800px"
+      />
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredData.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </TableCard>
   );
 }

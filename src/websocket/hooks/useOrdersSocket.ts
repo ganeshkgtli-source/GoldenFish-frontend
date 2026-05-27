@@ -28,7 +28,8 @@ type OrderSocketPayload =
   | DeletePayload;
 
 export const useOrdersSocket = (
-  type: string = "self",
+   type?: string,
+
   clientId?: string,
 ) => {
   /**
@@ -45,6 +46,7 @@ export const useOrdersSocket = (
    * TEMP USER ID
    */
   const userId = "current_user";
+ 
 
   useEffect(() => {
     /**

@@ -25,47 +25,32 @@ export default defineConfig({
   ],
 
   build: {
-  rollupOptions: {
-    output: {
-      manualChunks(id) {
-        if (
-          id.includes("react-dom") ||
-          id.includes("/react/")
-        ) {
-          return "react";
-        }
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("react-dom") || id.includes("/react/")) {
+            return "react";
+          }
 
-        if (
-          id.includes(
-            "react-router-dom",
-          )
-        ) {
-          return "router";
-        }
+          if (id.includes("react-router-dom")) {
+            return "router";
+          }
 
-        if (
-          id.includes(
-            "@tanstack/react-query",
-          )
-        ) {
-          return "query";
-        }
+          if (id.includes("@tanstack/react-query")) {
+            return "query";
+          }
 
-        if (id.includes("axios")) {
-          return "axios";
-        }
+          if (id.includes("axios")) {
+            return "axios";
+          }
 
-        if (
-          id.includes(
-            "react-toastify",
-          )
-        ) {
-          return "toast";
-        }
+          if (id.includes("react-toastify")) {
+            return "toast";
+          }
+        },
       },
     },
   },
-},
 
   server: {
     host: "0.0.0.0",
@@ -74,10 +59,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      "@": path.resolve(
-        __dirname,
-        "./src",
-      ),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 

@@ -1,45 +1,88 @@
-import { useParams, useSearch, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 
-import {
-  User,
-  TrendingUp,
-  Activity,
-  Clock,
-  AlertTriangle,
-  FileText,
-  BarChart3,
-} from "lucide-react";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+
+import { Activity, AlertTriangle, BarChart3, FileText } from "lucide-react";
 
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
 
-import { useClient } from "../hooks/useClients";
-
+import OrdersTable from "../components/OrdersTable";
+import PositionsTable from "../components/PositionsTable";
 import TradeTable from "../components/TradeTable";
 
-import OrdersTable from "../components/OrdersTable";
+import { useClient } from "../hooks/useClients";
 
 import { useOrdersSocket } from "@/websocket/hooks/useOrdersSocket";
 
 import { useRealtimeStore } from "@/websocket/store/realtimeStore";
+import { useErrorsSocket } from "@/websocket/hooks/useErrorsSocket";
+import { useTradesSocket } from "@/websocket/hooks/useTradesSocket";
+import { usePositionsSocket } from "@/websocket/hooks/usePositions";
 
 type TabType = "trades" | "orders" | "positions" | "errors";
+
+const isTodayData = (date?: string): boolean => {
+  if (!date) {
+    return false;
+  }
+
+  const today = new Date();
+  const itemDate = new Date(date);
+
+  return (
+    today.getDate() === itemDate.getDate() &&
+    today.getMonth() === itemDate.getMonth() &&
+    today.getFullYear() === itemDate.getFullYear()
+  );
+};
 
 export default function ClientDetailPage() {
   const { id } = useParams({
     strict: false,
   });
 
+  /**
+   * CLIENT
+   */
   const { data, isLoading } = useClient(id!);
 
   /**
-   * REALTIME SOCKET
+   * SOCKET
    */
   useOrdersSocket("client", id);
+  useErrorsSocket("client", id);
+  useTradesSocket("client", id);
+  usePositionsSocket("client", id);
 
   /**
-   * REALTIME ORDERS
+   * RAW REALTIME STATE
    */
-  const realtimeOrders = useRealtimeStore((state) => state.orders);
+  const orders = useRealtimeStore((state) => state.orders);
+
+  const trades = useRealtimeStore((state) => state.trades);
+
+  const positions = useRealtimeStore((state) => state.positions);
+
+  const errors = useRealtimeStore((state) => state.errors);
+
+  /**
+   * FILTERED DATA
+   */
+  const todayOrders = useMemo(() => {
+    return orders.filter((order) => isTodayData(order.created_at));
+  }, [orders]);
+
+  const todayTrades = useMemo(() => {
+    return trades.filter((trade) => isTodayData(trade.created_at));
+  }, [trades]);
+
+  const activePositions = useMemo(() => {
+    return positions.filter((position) => Number(position.netQty) !== 0);
+  }, [positions]);
+
+  const todayErrors = useMemo(() => {
+    return errors.filter((error) => isTodayData(error.created_at));
+  }, [errors]);
 
   /**
    * ROUTER
@@ -61,31 +104,35 @@ export default function ClientDetailPage() {
     navigate({
       search: (prev: { tab?: TabType }) => ({
         ...(prev ?? {}),
-
         tab,
       }),
     });
   };
 
   /**
-   * TOTAL PNL
-   */
-  const totalPnl = 0;
-
-  /**
    * LOADING
    */
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div
+        className="
+          flex min-h-screen
+          items-center
+          justify-center
+        "
+      >
+        Loading...
+      </div>
+    );
   }
 
   return (
     <div
       className="
-        min-h-screen
+        flex min-h-screen flex-col
+
         bg-background
         text-foreground
-        flex flex-col
       "
     >
       <ManagementAdminNavbar />
@@ -93,64 +140,223 @@ export default function ClientDetailPage() {
       <main
         className="
           flex-1
-          space-y-6
-          p-4 md:p-6
+
+          p-4 md:p-5
         "
       >
-        {/* SUMMARY */}
+        {/* CONTAINER */}
         <div
           className="
-            grid
-            grid-cols-1
-            gap-4
+            overflow-hidden
 
-            sm:grid-cols-2
-            lg:grid-cols-4
+            rounded-2xl
+            border border-border
+
+            bg-card
           "
         >
-          {/* CLIENT */}
+          {/* HEADER */}
           <div
             className="
-              flex items-center
-              justify-between
+              flex items-center justify-between
 
-              rounded-2xl
-              border border-border
-              bg-card
-              p-5
+              border-b border-border
 
-              transition
-              hover:shadow-md
+              px-4
+              py-2
             "
           >
-            <div className="flex items-center gap-3">
+            {/* TABS */}
+            <div
+              className="
+                flex items-center gap-1
+              "
+            >
+              {[
+                {
+                  key: "trades",
+                  label: "Trades",
+                  icon: FileText,
+                  count: todayTrades.length,
+                },
+
+                {
+                  key: "orders",
+                  label: "Orders",
+                  icon: BarChart3,
+                  count: todayOrders.length,
+                },
+
+                {
+                  key: "positions",
+                  label: "Positions",
+                  icon: Activity,
+                  count: activePositions.length,
+                },
+
+                {
+                  key: "errors",
+                  label: "Errors",
+                  icon: AlertTriangle,
+                  count: todayErrors.length,
+                },
+              ].map((tab) => {
+                const Icon = tab.icon;
+
+                const isActive = activeTab === tab.key;
+
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => handleTabChange(tab.key as TabType)}
+                    className={`
+                      relative
+
+                      flex items-center gap-2
+
+                      px-4
+                      py-3
+                      pr-7
+
+                      text-sm
+                      font-medium
+
+                      transition-all
+                      duration-200
+
+                      ${
+                        isActive
+                          ? `
+                            text-foreground
+                          `
+                          : `
+                            text-muted-foreground
+                            hover:text-foreground
+                          `
+                      }
+                    `}
+                  >
+                    {/* ICON */}
+                    <Icon
+                      size={15}
+                      className={`
+                        transition-colors
+
+                        ${isActive ? "text-red-400" : "text-muted-foreground"}
+                      `}
+                    />
+
+                    {/* LABEL */}
+                    <span>{tab.label}</span>
+
+                    {/* COUNT */}
+                    {tab.count > 0 && (
+                      <span
+                        className={`
+                          absolute
+                          -top-0.5
+                          right-0
+
+                          text-[11px]
+                          font-semibold
+
+                          ${
+                            tab.key === "errors"
+                              ? `
+                                text-red-500
+                                dark:text-red-400
+                              `
+                              : `
+                                text-yellow-500
+                                dark:text-yellow-400
+                              `
+                          }
+                        `}
+                      >
+                        +{tab.count > 99 ? "99" : tab.count}
+                      </span>
+                    )}
+
+                    {/* ACTIVE UNDERLINE */}
+                    {isActive && (
+                      <div
+                        className="
+                          absolute
+                          bottom-0
+                          left-3
+                          right-3
+
+                          h-[2px]
+
+                          rounded-full
+
+                          bg-red-500
+                        "
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* CLIENT INFO */}
+            <div
+              className="
+                flex items-center
+
+                rounded-xl
+                border border-border/70
+
+                bg-muted/20
+
+                px-4
+                py-2.5
+              "
+            >
               <div
                 className="
-                  flex h-10 w-10
-                  items-center justify-center
+                  flex items-center gap-3
 
-                  rounded-full
-
-                  bg-red-500/10
-                  font-semibold
-                  text-red-500
+                  overflow-hidden
                 "
               >
-                {data?.broker_session?.dhan_client_name?.[0]?.toUpperCase() ||
-                  data?.username?.[0]?.toUpperCase() ||
-                  "U"}
-              </div>
+                {/* CLIENT NAME */}
+                <p
+                  className="
+                    max-w-[220px]
+                    truncate
 
-              <div>
-                <p className="text-sm font-semibold">
+                    text-[14px]
+                    font-semibold
+                    tracking-tight
+
+                    text-foreground
+                  "
+                >
                   {data?.broker_session?.dhan_client_name ||
                     data?.username ||
                     "Unknown User"}
                 </p>
 
+                {/* DIVIDER */}
+                <div
+                  className="
+                    h-4
+                    w-px
+
+                    bg-border/80
+                  "
+                />
+
+                {/* CLIENT ID */}
                 <p
                   className="
-                    text-xs
+                    whitespace-nowrap
+
+                    text-[13px]
+                    font-medium
+                    tracking-wide
+
                     text-muted-foreground
                   "
                 >
@@ -158,242 +364,134 @@ export default function ClientDetailPage() {
                 </p>
               </div>
             </div>
-
-            <User size={18} />
           </div>
 
-          {/* PNL */}
+          {/* CONTENT */}
           <div
             className="
-              flex items-center
-              justify-between
+              min-h-[600px]
 
-              rounded-2xl
-              border border-border
-              bg-card
-              p-5
+              bg-background/30
             "
           >
-            <div>
-              <p
+            {/* TRADES */}
+            {activeTab === "trades" && (
+              <div
                 className="
-                  text-xs
-                  text-muted-foreground
+                  animate-in
+                  fade-in-0
+                  duration-200
                 "
               >
-                Total P&L
-              </p>
+                <TradeTable />
+              </div>
+            )}
 
-              <p
-                className={`
-                  mt-1 text-xl font-bold
-
-                  ${totalPnl >= 0 ? "text-green-500" : "text-red-500"}
-                `}
+            {/* ORDERS */}
+            {activeTab === "orders" && (
+              <div
+                className="
+                  animate-in
+                  fade-in-0
+                  duration-200
+                "
               >
-                ₹{totalPnl.toFixed(0)}
-              </p>
-            </div>
+                <OrdersTable />
+              </div>
+            )}
 
-            <TrendingUp className="text-green-500" />
+            {/* POSITIONS */}
+            {activeTab === "positions" && (
+              <div
+                className="
+                  animate-in
+                  fade-in-0
+                  duration-200
+                "
+              >
+                <PositionsTable />
+              </div>
+            )}
+
+            {/* ERRORS */}
+            {activeTab === "errors" && (
+              <div
+                className="
+                  flex min-h-[600px]
+                  flex-col
+                  items-center
+                  justify-center
+
+                  gap-3
+
+                  text-center
+                "
+              >
+                <div
+                  className="
+                    flex h-14 w-14
+                    items-center
+                    justify-center
+
+                    rounded-2xl
+
+                    border border-red-500/10
+
+                    bg-red-500/5
+                  "
+                >
+                  <AlertTriangle
+                    size={26}
+                    className="
+                      text-red-400
+                    "
+                  />
+                </div>
+
+                <div
+                  className="
+                    space-y-1
+                  "
+                >
+                  <p
+                    className="
+                      text-[15px]
+                      font-semibold
+
+                      text-foreground
+                    "
+                  >
+                    No Error Logs
+                  </p>
+
+                  <p
+                    className="
+                      text-sm
+
+                      text-muted-foreground
+                    "
+                  >
+                    Rejected orders and websocket errors will appear here.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* LIVE ORDERS */}
-          <div
-            className="
-              flex items-center
-              justify-between
-
-              rounded-2xl
-              border border-border
-              bg-card
-              p-5
-            "
-          >
-            <div>
-              <p
-                className="
-                  text-xs
-                  text-muted-foreground
-                "
-              >
-                Live Orders
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  text-xl
-                  font-bold
-                  text-blue-500
-                "
-              >
-                {realtimeOrders.length}
-              </p>
-            </div>
-
-            <Activity className="text-blue-500" />
-          </div>
-
-          {/* JOINED */}
-          <div
-            className="
-              flex items-center
-              justify-between
-
-              rounded-2xl
-              border border-border
-              bg-card
-              p-5
-            "
-          >
-            <div>
-              <p
-                className="
-                  text-xs
-                  text-muted-foreground
-                "
-              >
-                Joined
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  font-semibold
-                "
-              >
-                {data?.date_joined
-                  ? new Date(data.date_joined).toLocaleDateString()
-                  : "--"}
-              </p>
-            </div>
-
-            <Clock className="text-yellow-500" />
-          </div>
-        </div>
-
-        {/* TABS */}
-        <div
-          className="
-            flex gap-2
-            border-b border-border
-          "
-        >
-          {[
-            {
-              key: "trades",
-              label: "Trades",
-              icon: FileText,
-            },
-
-            {
-              key: "orders",
-              label: "Orders",
-              icon: BarChart3,
-            },
-
-            {
-              key: "positions",
-              label: "Positions",
-              icon: Activity,
-            },
-
-            {
-              key: "errors",
-              label: "Errors",
-              icon: AlertTriangle,
-            },
-          ].map((tab) => {
-            const Icon = tab.icon;
-
-            return (
-              <button
-                key={tab.key}
-                onClick={() => handleTabChange(tab.key as TabType)}
-                className={`
-                  flex items-center gap-2
-
-                  border-b-2
-                  px-4 py-2
-                  text-sm
-
-                  ${
-                    activeTab === tab.key
-                      ? "border-red-500"
-                      : "border-transparent"
-                  }
-                `}
-              >
-                <Icon size={16} />
-
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* CONTENT */}
-        <div
-          className="
-            overflow-hidden
-            rounded-2xl
-            border border-border
-            bg-card
-          "
-        >
-          {/* FILTER */}
-          <div
-            className="
-              border-b border-border
-              p-3
-            "
-          ></div>
-
-          {/* TRADES */}
-          {activeTab === "trades" && <TradeTable />}
-
-          {/* ORDERS */}
-          {activeTab === "orders" && <OrdersTable />}
-
-          {/* POSITIONS */}
-          {activeTab === "positions" && (
-            <div
-              className="
-                p-10
-                text-center
-                text-sm
-                text-muted-foreground
-              "
-            >
-              No live positions available
-            </div>
-          )}
-
-          {/* ERRORS */}
-          {activeTab === "errors" && (
-            <div
-              className="
-                p-10
-                text-center
-                text-sm
-                text-muted-foreground
-              "
-            >
-              Error logs coming soon.
-            </div>
-          )}
         </div>
       </main>
 
+      {/* FOOTER */}
       <footer
         className="
           mt-auto
+
           border-t border-border
+
           py-4
+
           text-center
           text-sm
+
           text-muted-foreground
         "
       >
