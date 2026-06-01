@@ -220,24 +220,23 @@ export type OpenPosition = {
 };
 
 export type OpenPositionsResponse = {
-  realizedPnL: number;
+  openPositionsCount: number;
 
-  unrealizedPnL: number;
-openPositionsCount: number;
   TotalPnL: number;
 
-  positions: OpenPosition[];
+  totalUnrealizedPnL: number;
+
+  openPositions: OpenPosition[];
 };
 
 export const getOpenPositions =
   async (): Promise<OpenPositionsResponse> => {
     const res = await api.get(
-      "/open-positions/"
+      "/open-positions/",
     );
 
     return res.data;
   };
-
 /* =========================================================
    HOLDINGS
 ========================================================= */
