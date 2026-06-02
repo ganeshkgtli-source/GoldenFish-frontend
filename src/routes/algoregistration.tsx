@@ -2,6 +2,6 @@ import AlgoSmartEdgeRegistrationPage from "@/features/auth/pages/AlgoSmartEdgeRe
  import { createFileRoute } from "@tanstack/react-router";
 
  
-export const Route = createFileRoute("/algoRregistration")({
+export const Route = createFileRoute("/algoregistration")({
   component: AlgoSmartEdgeRegistrationPage  ,
 });

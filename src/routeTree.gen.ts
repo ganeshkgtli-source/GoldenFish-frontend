@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as Kyc_verificationRouteImport } from './routes/kyc_verification'
-import { Route as AlgoRregistrationRouteImport } from './routes/algoRregistration'
+import { Route as AlgoregistrationRouteImport } from './routes/algoregistration'
 import { Route as UserRouteImport } from './routes/_user'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin/dashboard'
@@ -47,9 +47,9 @@ const Kyc_verificationRoute = Kyc_verificationRouteImport.update({
   path: '/kyc_verification',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AlgoRregistrationRoute = AlgoRregistrationRouteImport.update({
-  id: '/algoRregistration',
-  path: '/algoRregistration',
+const AlgoregistrationRoute = AlgoregistrationRouteImport.update({
+  id: '/algoregistration',
+  path: '/algoregistration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserRoute = UserRouteImport.update({
@@ -145,7 +145,7 @@ const AdminClientIdRoute = AdminClientIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/algoRregistration': typeof AlgoRregistrationRoute
+  '/algoregistration': typeof AlgoregistrationRoute
   '/kyc_verification': typeof Kyc_verificationRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
@@ -168,7 +168,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/algoRregistration': typeof AlgoRregistrationRoute
+  '/algoregistration': typeof AlgoregistrationRoute
   '/kyc_verification': typeof Kyc_verificationRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
@@ -193,7 +193,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_user': typeof UserRouteWithChildren
-  '/algoRregistration': typeof AlgoRregistrationRoute
+  '/algoregistration': typeof AlgoregistrationRoute
   '/kyc_verification': typeof Kyc_verificationRoute
   '/register': typeof RegisterRoute
   '/signin': typeof SigninRoute
@@ -218,7 +218,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/algoRregistration'
+    | '/algoregistration'
     | '/kyc_verification'
     | '/register'
     | '/signin'
@@ -241,7 +241,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/algoRregistration'
+    | '/algoregistration'
     | '/kyc_verification'
     | '/register'
     | '/signin'
@@ -265,7 +265,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_user'
-    | '/algoRregistration'
+    | '/algoregistration'
     | '/kyc_verification'
     | '/register'
     | '/signin'
@@ -290,7 +290,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UserRoute: typeof UserRouteWithChildren
-  AlgoRregistrationRoute: typeof AlgoRregistrationRoute
+  AlgoregistrationRoute: typeof AlgoregistrationRoute
   Kyc_verificationRoute: typeof Kyc_verificationRoute
   RegisterRoute: typeof RegisterRoute
   SigninRoute: typeof SigninRoute
@@ -329,11 +329,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Kyc_verificationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/algoRregistration': {
-      id: '/algoRregistration'
-      path: '/algoRregistration'
-      fullPath: '/algoRregistration'
-      preLoaderRoute: typeof AlgoRregistrationRouteImport
+    '/algoregistration': {
+      id: '/algoregistration'
+      path: '/algoregistration'
+      fullPath: '/algoregistration'
+      preLoaderRoute: typeof AlgoregistrationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_user': {
@@ -488,7 +488,7 @@ const UserRouteWithChildren = UserRoute._addFileChildren(UserRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UserRoute: UserRouteWithChildren,
-  AlgoRregistrationRoute: AlgoRregistrationRoute,
+  AlgoregistrationRoute: AlgoregistrationRoute,
   Kyc_verificationRoute: Kyc_verificationRoute,
   RegisterRoute: RegisterRoute,
   SigninRoute: SigninRoute,
