@@ -1,9 +1,15 @@
 import ManagementAdminNavbar from "@/features/admin/operations/components/Managementadmin_navBar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Users, ShoppingCart, AlertTriangle, TrendingUp } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useOrdersSocket } from "@/websocket/hooks/useOrdersSocket";
 import { useRealtimeStore } from "@/websocket/store/realtimeStore";
+import { useTradesSocket } from "@/websocket/hooks/useTradesSocket";
+
+import { usePositionsSocket } from "@/websocket/hooks/usePositions";
+
+import { useErrorsSocket } from "@/websocket/hooks/useErrorsSocket";
+
 /* ─── TYPES ─────────────────────────────────────────────── */
 
 type StatType = "clients" | "orders" | "errors" | "success";
@@ -15,63 +21,80 @@ type Stat = {
   danger?: boolean;
 };
 
-type ErrorLog = {
-  client: string;
-  message: string;
-  type: "success" | "error" | "warning";
-  time: string;
-};
-
-/* ─── DUMMY DATA ─────────────────────────────────────────── */
-
-const INITIAL_STATS: Stat[] = [
-  { type: "clients", value: "128", sub: "+12 this month" },
-  { type: "orders", value: "342", sub: "+18% vs yesterday" },
-  { type: "errors", value: "12", sub: "-4 vs yesterday", danger: true },
-  { type: "success", value: "98.6%", sub: "+2.4% vs yesterday" },
-];
-
-const INITIAL_ERRORS: ErrorLog[] = [
-  {
-    client: "Client A",
-    message: "Trade executed",
-    type: "success",
-    time: "now",
-  },
-  { client: "Client B", message: "API rejection", type: "error", time: "now" },
-  {
-    client: "Client C",
-    message: "Slippage detected",
-    type: "warning",
-    time: "now",
-  },
-];
-
-const MESSAGES: ErrorLog["message"][] = [
-  "API rejection",
-  "Slippage",
-  "Order failed",
-];
-const LOG_TYPES: ErrorLog["type"][] = ["error", "warning", "success"];
+ 
 
 /* ─── PAGE ───────────────────────────────────────────────── */
 
 export default function ManagementDashboardPage() {
   const user = useAuthStore((s) => s.user);
- 
-
-  // FIX: useState<Trade[]> and useState<ErrorLog[]> — was untyped
-  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>(INITIAL_ERRORS);
   const [limit, setLimit] = useState(10);
-  const [stats, setStats] = useState<Stat[]>(INITIAL_STATS);
-
-  // FIX: store interval refs so they can be properly cleared
-  const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useOrdersSocket(user?.role);
+
+  useTradesSocket(user?.role);
+
+  usePositionsSocket(user?.role);
+
+  useErrorsSocket(user?.role);
   const realtimeOrders = useRealtimeStore((state) => state.orders);
-  /* responsive limit */
+
+  const realtimeTrades = useRealtimeStore((state) => state.trades);
+
+  const realtimePositions = useRealtimeStore((state) => state.positions);
+
+  const realtimeErrors = useRealtimeStore(
+    (state) => state.errors,
+  );
+  
+const stats: Stat[] = [
+  {
+    type: "clients",
+    value: String(
+      new Set(
+        realtimeOrders.map(
+          (o) => o.user_id,
+        ),
+      ).size,
+    ),
+    sub: "Connected Clients",
+  },
+
+  {
+    type: "orders",
+    value: String(
+      realtimeOrders.length,
+    ),
+    sub: `${realtimeTrades.length} Trades`,
+  },
+
+  {
+    type: "errors",
+    value: String(
+      realtimeErrors.length,
+    ),
+    sub: "Realtime Errors",
+    danger:
+      realtimeErrors.length > 0,
+  },
+
+  {
+    type: "success",
+    value: String(
+      realtimePositions.filter(
+        (p) =>
+          Number(p.netQty) !== 0,
+      ).length,
+    ),
+    sub: "Open Positions",
+  },
+];
+const errorLogs =
+  realtimeErrors.slice(
+    0,
+    limit,
+  );
+  console.log(errorLogs)
+
   useEffect(() => {
     const updateLimit = () => setLimit(window.innerWidth < 768 ? 5 : 10);
     updateLimit();
@@ -79,58 +102,6 @@ export default function ManagementDashboardPage() {
     return () => window.removeEventListener("resize", updateLimit);
   }, []);
 
-  /* live stats ticker */
-  useEffect(() => {
-    statsIntervalRef.current = setInterval(() => {
-      setStats((prev) =>
-        prev.map((item) => {
-          if (item.type === "clients")
-            return { ...item, value: (Number(item.value) + 1).toString() };
-          if (item.type === "orders")
-            return { ...item, value: (Number(item.value) + 2).toString() };
-          if (item.type === "errors")
-            return {
-              ...item,
-              value: Math.max(0, Number(item.value) - 1).toString(),
-            };
-          if (item.type === "success")
-            return {
-              ...item,
-              value: (95 + Math.random() * 5).toFixed(1) + "%",
-            };
-          return item;
-        }),
-      );
-    }, 3000);
-
-    return () => {
-      // FIX: was not using ref — multiple intervals could stack
-      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
-    };
-  }, []);
-
-  /* live trades + errors */
-  useEffect(() => {
-    liveIntervalRef.current = setInterval(() => {
-      const clientLetter = String.fromCharCode(
-        65 + Math.floor(Math.random() * 5),
-      );
-
-      const newError: ErrorLog = {
-        client: `Client ${clientLetter}`,
-        message: MESSAGES[Math.floor(Math.random() * MESSAGES.length)],
-        type: LOG_TYPES[Math.floor(Math.random() * LOG_TYPES.length)],
-        time: "now",
-      };
-
-      setErrorLogs((prev) => [newError, ...prev].slice(0, limit));
-    }, 4000);
-
-    return () => {
-      // FIX: proper cleanup of live interval
-      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
-    };
-  }, [limit]);
   const latestOrders = realtimeOrders.slice(0, 10).map((o) => ({
     client: o.username || `Client ${o.user_id}`,
 
@@ -142,24 +113,19 @@ export default function ManagementDashboardPage() {
 
     price: `₹${Number(o.price).toLocaleString()}`,
 
-   time: new Date(
-  o.created_at,
-).toLocaleString(
-  "en-IN",
-  {
-    day: "2-digit",
+    time: new Date(o.created_at).toLocaleString("en-IN", {
+      day: "2-digit",
 
-    month: "short",
+      month: "short",
 
-    year: "numeric",
+      year: "numeric",
 
-    hour: "2-digit",
+      hour: "2-digit",
 
-    minute: "2-digit",
+      minute: "2-digit",
 
-    second: "2-digit",
-  },
-),
+      second: "2-digit",
+    }),
   }));
   /* ─── RENDER ─────────────────────────────────────────── */
 
@@ -228,40 +194,47 @@ export default function ManagementDashboardPage() {
             <h3 className="text-sm font-semibold mb-4 text-muted-foreground">
               ~ Overall Error Log
             </h3>
-            <div className="space-y-3 text-sm flex-1 overflow-y-auto scrollbar-hide">
-              {errorLogs.slice(0, limit).map((log, i) => (
-                <p
-                  key={i}
-                  className={
-                    log.type === "success"
-                      ? "text-green-500"
-                      : log.type === "error"
-                        ? "text-red-500"
-                        : "text-yellow-500"
-                  }
-                >
-                  {log.type === "success" && "✔ "}
-                  {log.type === "error" && "✖ "}
-                  {log.type === "warning" && "⚠ "}
-                  <span className="truncate">
-                    {log.client} — {log.message}
-                  </span>
-                </p>
-              ))}
-            </div>
+          {/* <div className="space-y-3 text-sm flex-1 overflow-y-auto scrollbar-hide">
+  {errorLogs.length === 0 ? (
+    <p className="text-muted-foreground">
+      No errors found
+    </p>
+  ) : (
+    errorLogs.map((log, i) => (
+      <p
+        key={i}
+        className={
+          log.type === "success"
+            ? "text-green-500"
+            : log.type === "error"
+              ? "text-red-500"
+              : "text-yellow-500"
+        }
+      >
+        {log.type === "success" && "✔ "}
+        {log.type === "error" && "✖ "}
+        {log.type === "warning" && "⚠ "}
+
+        <span className="truncate">
+          {log.client} — {log.message}
+        </span>
+      </p>
+    ))
+  )}
+</div> */}
           </div>
 
           {/* TRADE ORDERS */}
           <div className="rounded-2xl border border-border bg-card p-5 flex flex-col min-h-0 h-[520px]">
             <h3 className="text-sm font-semibold mb-4 text-muted-foreground">
-              ↗  Orders
+              ↗ Orders
             </h3>
             <div className="grid grid-cols-5 text-xs text-muted-foreground px-4 mb-2">
               <span>Client</span>
               <span className="text-center">Type</span>
               <span className="text-center">Qty</span>
               <span className="text-right">Price</span>
-                            <span className="text-right">Time</span>
+              <span className="text-right">Time</span>
 
               <span />
             </div>
@@ -303,11 +276,11 @@ const STAT_CONFIG: Record<
     color: "bg-yellow-500/10 text-yellow-500",
     label: "Total Errors",
   },
-  success: {
-    icon: <TrendingUp size={18} />,
-    color: "bg-purple-500/10 text-purple-500",
-    label: "Success Rate",
-  },
+ success: {
+  icon: <TrendingUp size={18} />,
+  color: "bg-purple-500/10 text-purple-500",
+  label: "Open Positions",
+},
 };
 
 function StatCard({ type, value, sub, danger }: Stat) {
@@ -358,8 +331,7 @@ function TradeRow({
   /**
    * SPLIT DATE + TIME
    */
-  const [date, clock] =
-    time.split(",");
+  const [date, clock] = time.split(",");
 
   return (
     <div
