@@ -7,13 +7,13 @@ import {
   LogOut,
   User,
   ChevronDown,
-  BrainCircuit,
+  // BrainCircuit,
   PlusSquare,
-  BarChart3,
-  Settings2,
-  Activity,
-  ShieldCheck,
-  CandlestickChart,
+  // BarChart3,
+  // Settings2,
+  // Activity,
+  // ShieldCheck,
+  // CandlestickChart,
 } from "lucide-react";
 
 import { useTheme } from "@/context/useTheme";
@@ -24,35 +24,35 @@ import { useLogout } from "@/features/auth/hooks/useAuth";
 
 /* ─── NAV CONFIG ─────────────────────────────────────────── */
 
- const NAV_ITEMS = [
+const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/super-admin/dashboard" },
-  { label: "Strategies", icon: BrainCircuit, to: "/super-admin/strategies" },
+  // { label: "Strategies", icon: BrainCircuit, to: "/super-admin/strategies" },
   {
     label: "Create Strategy",
     icon: PlusSquare,
     to: "/super-admin/createstrategies",
   },
-  { label: "Backtesting", icon: BarChart3, to: "/super-admin/backtesting" },
-  {
-    label: "Live Trades",
-    icon: CandlestickChart,
-    to: "/super-admin/live-trades",
-  },
-  {
-    label: "Execution Monitor",
-    icon: Activity,
-    to: "/super-admin/execution-monitor",
-  },
-  {
-    label: "Risk Management",
-    icon: ShieldCheck,
-    to: "/super-admin/risk-management",
-  },
-  {
-    label: "Strategy Settings",
-    icon: Settings2,
-    to: "/super-admin/strategy-settings",
-  },
+  // { label: "Backtesting", icon: BarChart3, to: "/super-admin/backtesting" },
+  // {
+  //   label: "Live Trades",
+  //   icon: CandlestickChart,
+  //   to: "/super-admin/live-trades",
+  // },
+  // {
+  //   label: "Execution Monitor",
+  //   icon: Activity,
+  //   to: "/super-admin/execution-monitor",
+  // },
+  // {
+  //   label: "Risk Management",
+  //   icon: ShieldCheck,
+  //   to: "/super-admin/risk-management",
+  // },
+  // {
+  //   label: "Strategy Settings",
+  //   icon: Settings2,
+  //   to: "/super-admin/strategy-settings",
+  // },
   //  { label: "Order Logs", icon: ClipboardList, to: "/super-admin/order-logs" },
   //  { label: "Error Logs", icon: AlertTriangle, to: "/super-admin/error-logs" }
 ] as const;
@@ -184,13 +184,14 @@ export default function SANavbar() {
         >
           {/* ── LOGO ─────────────────────────────────────── */}
           <button
-onClick={() => {
-  closeMenus();
+            onClick={() => {
+              closeMenus();
 
-  navigate({
-    to: "/super-admin/dashboard",
-  });
-}}            className="flex items-center gap-2.5 flex-shrink-0 group"
+              navigate({
+                to: "/super-admin/dashboard",
+              });
+            }}
+            className="flex items-center gap-2.5 flex-shrink-0 group"
             aria-label="Go to dashboard"
           >
             {/* diamond mark */}
@@ -218,7 +219,7 @@ onClick={() => {
                   <Link
                     key={item.to}
                     to={item.to}
-                     onClick={closeMenus}
+                    onClick={closeMenus}
                     className={`
                       relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg
                       text-sm font-medium transition-all duration-150
@@ -437,7 +438,7 @@ onClick={() => {
                 <Link
                   key={item.to}
                   to={item.to}
-onClick={closeMenus}
+                  onClick={closeMenus}
                   style={{ animationDelay: `${idx * 40}ms` }}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
@@ -531,3 +532,4 @@ function DropdownItem({
     </button>
   );
 }
+ 

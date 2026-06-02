@@ -1,1 +1,0 @@
-Pending edits: will optimize RegisterWizard + StepPersonal/StepSecurity/StepApi after tool command syntax issue is resolved.
